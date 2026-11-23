@@ -5,11 +5,11 @@ Tick items off here (and in `AGENTS.md` §1) when done. Last updated: 2026-11-24
 
 ## 0. Verify right now (quick)
 
-- [ ] **Google sign-in on device (prod flavor).** The user reports creating the Android OAuth client. Tap
-      "Continue with Google" in the installed prod app. If it fails, see `docs/auth.md` §6. Note the Desktop client
-      (`…41rf…`, in `.env` / `client_secret_*.json`) is *not* an Android client.
+- [x] **Google sign-in on device (prod flavor).** Works (2026-11-24): Web client as `serverClientId`, Android
+      OAuth client with the debug SHA-1 (`docs/auth.md` §5).
 - [ ] **OAuth consent screen**: published, or friends added as test users (`docs/auth.md` §5).
 - [ ] **Supabase Redirect URLs** for the browser fallback (`docs/auth.md` §4).
+- [ ] **Clean prod test data before release:** QA account `qa_tester1` (user_id 7, created 2026-11-24 by Claude for adb QA).
 - [ ] **On-device QA of P2**: feed/explore, like/double-tap, comments, search → follow → approve (two accounts),
       post with 1 and several photos, text-only post, delete, profile counts, theme toggle, sign-out/in.
 
@@ -61,6 +61,8 @@ and is rate-limited to a few emails per hour, so it's unusable for friends.
 ## 2. Permanent media URLs  ← important, affects web too
 
 Posts store presigned R2 URLs that **expire after 7 days**, so images on older posts break (web and app).
+**Mitigated 2026-11-24** (outstagram-server PR #3): listings and post view re-sign stored URLs on read. Still worth
+doing for permanent, CDN-cacheable links:
 - Find the bucket's public address: Cloudflare → R2 → bucket `outstagram` → Settings → Public access
   (an `r2.dev` subdomain, or connect a custom domain such as `media.aryan.cfd`, which is better: cacheable, no rate limits).
   The question-image bucket the web uses is `https://pub-682f1a94c94443278f61ec7ca3dadaec.r2.dev`; confirm whether

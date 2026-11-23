@@ -11,7 +11,7 @@ status, the repository map and the commands. Deep dives live in `docs/`:
 | `docs/TODO.md` | Roadmap and open work, including the email sign-in code + SMTP plan |
 | `PLAN.md` | The original product/architecture plan (phases P0–P7, mobile-only extras). Background, not status |
 
-Last updated: 2026-11-24.
+Last updated: 2026-11-24 (Google sign-in verified; media URLs re-signed server-side).
 
 ---
 
@@ -46,7 +46,7 @@ advantages (see `PLAN.md` §5).
 | Phase | Scope | Status |
 |---|---|---|
 | P0 Foundation | Flavors, configs, theme, router shell, Dio client, CI | ✅ done |
-| P1 Auth | Password + register, native Google, PKCE browser fallback, refresh tokens | ✅ done (Android OAuth client reported created by the user 2026-11-24; verify Google on device, `docs/TODO.md` §0) |
+| P1 Auth | Password + register, native Google, PKCE browser fallback, refresh tokens | ✅ done (Google sign-in verified on device 2026-11-24: Web client as `serverClientId` + Android client with the debug SHA-1) |
 | P2 Social | Feed/Explore, post card, likes, comments, search, profiles, follow requests, composer | ✅ done (needs on-device QA) |
 | P3 Exams | Dart port of the Pariksha engine, presets, practice, community exams, runner, results, history | ⏳ next (tab shows "Arrives in P3") |
 | P4 AI tutor | SSE streaming, Markdown + LaTeX, skills, quota, library, saved equations | ⏳ |
@@ -167,7 +167,10 @@ Host specifics (Windows, user `karti`):
 9. `google_sign_in` 7: `GoogleSignIn.instance.initialize()` may only run once per process, so the nonce is per app launch (`GoogleAuth.rawNonce`).
 10. The staging banner was removed on purpose (it covered the status bar edge-to-edge). Staging is marked by the app name "Outstagram β" and a chip on sign-in.
 11. Two OAuth client IDs exist; only the **Web** one is used. See `docs/auth.md` §5 before touching Google sign-in.
-12. Uploaded media URLs are **presigned and expire after 7 days** until `S3_PUBLIC_BASE_URL` is set on the server (`docs/TODO.md`).
+12. Uploaded media URLs are stored as **7-day presigned** URLs. Since outstagram-server PR #3 the server re-signs them on read
+    (`media.fresh_media_url`), so old images work again; `S3_PUBLIC_BASE_URL` would make them permanent (`docs/TODO.md` §2).
+13. Samsung blanks `screencap` while a password field / secure keyboard or the Google account sheet is up. Close the keyboard
+    before screenshotting; `adb shell input text` into a field the scrolled layout moved can land in the wrong field.
 
 ---
 

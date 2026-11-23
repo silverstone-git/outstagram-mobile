@@ -91,7 +91,7 @@ GCP project `top-athlete-472606-v4` (project number `595282356777`):
 
 | OAuth client | Type | ID | Used by |
 |---|---|---|---|
-| Web client | Web application | `595282356777-ppkjuihespj58af8htp4nivg2ife0dbk.apps.googleusercontent.com` | Supabase Google provider (both projects) **and** the app's `serverClientId` |
+| Web client | Web application | `595282356777-ppkjuihespj58af8htp4nivg2ife0dbk.apps.googleusercontent.com` | Supabase Google provider (both projects) **and** the app's `serverClientId` (`GOOGLE_SERVER_CLIENT_ID` in `config/*.json`). Verified on device 2026-11-24 |
 | Desktop client | Desktop ("installed") | `595282356777-41rf7a12nidjqsuh7t6jh9g10lbaucbu…` | **Nothing.** It's in `.env` / `client_secret_*.json` from early setup; not needed |
 | Android client(s) | Android | (no secret) | Lets Google issue tokens to the app: package + SHA-1 |
 
@@ -102,7 +102,7 @@ redirects to (both projects use the same one).
 
 | Package | SHA-1 | When |
 |---|---|---|
-| `com.cyto.outstagram` | `06:DB:60:E1:94:44:88:54:08:85:47:54:58:4A:5A:AA:55:3E:F7:4F` (debug keystore; current release APKs are debug-signed) | now (user reports created 2026-11-24, unverified) |
+| `com.cyto.outstagram` | `06:DB:60:E1:94:44:88:54:08:85:47:54:58:4A:5A:AA:55:3E:F7:4F` (debug keystore; current release APKs are debug-signed) | created; **verified working** on device 2026-11-24 |
 | `com.cyto.outstagram.staging` | same | now |
 | `com.cyto.outstagram` | upload key SHA-1 | when a real upload key exists (P7) |
 | `com.cyto.outstagram` | Play App Signing key SHA-1 (Play Console → App integrity) | after the first Play upload |
