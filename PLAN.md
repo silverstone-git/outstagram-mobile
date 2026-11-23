@@ -1,5 +1,7 @@
 # Outstagram Mobile: plan
 
+> **Status and rules live in [`AGENTS.md`](AGENTS.md); open work is in [`docs/TODO.md`](docs/TODO.md).** This file is the original design plan (2026-11-24). Background, not status. Since it was written: P0–P2 are done, the app is wired to the prod API for friend testing, and S1/S2/S5 plus search/explore shipped to prod.
+
 Flutter client for **outsie** (`outstagram-server`, FastAPI on Cloud Run). It aims for full parity with `outstagram-web` and uses what a phone can do that a browser can't.
 Written 2026-11-24 from a read of `outstagram-server` (`feat/admin-google`) and `outstagram-web` (`feat/landing-legal`).
 

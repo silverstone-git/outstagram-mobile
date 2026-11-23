@@ -1,17 +1,49 @@
-# outstagram
+# Outstagram (Android)
 
-A new Flutter project.
+Flutter app for **Outstagram**, a social network for students (posts, follows, exam results) with Pariksha mock
+exams and an AI tutor. It talks to the **outsie** API ([`silverstone-git/outstagram`](https://github.com/silverstone-git/outstagram)),
+the same backend as the web app ([`outstagram-web`](https://github.com/silverstone-git/outstagram-web)).
 
-## Getting Started
+**Working on this repo (human or AI)? Start with [`AGENTS.md`](AGENTS.md).**
 
-This project is a starting point for a Flutter application.
+## Features so far
 
-A few resources to get you started if this is your first Flutter project:
+- Sign in with username/password, create an account, or **Continue with Google** (native Android account sheet).
+  Sessions last 60 days and refresh themselves.
+- **Home:** Following and Explore feeds, category filters, pull to refresh, infinite scroll.
+- **Posts:** photo carousels, double-tap to like, comments, hashtags, text-only posts, delete your own.
+- **People:** search, profiles, follow / follow back, approve follow requests (Activity tab).
+- **Create:** pick several photos or use the camera. Photos are compressed on the phone (WebP ≤200 kB) before upload.
+- **Profile:** your posts and exam stats; light/dark theme.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Coming next: exams (P3), AI tutor (P4), Pro paywall (P5). See [`docs/TODO.md`](docs/TODO.md).
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Run it
+
+Requires Flutter (stable, Dart ≥3.12) and the Android SDK.
+
+```bash
+flutter pub get
+flutter run --flavor staging --dart-define-from-file=config/staging.json   # talks to outsie-staging
+flutter run --flavor prod    --dart-define-from-file=config/prod.json      # talks to production
+```
+
+Build a shareable APK:
+
+```bash
+flutter build apk --release --flavor prod --dart-define-from-file=config/prod.json
+# build/app/outputs/flutter-apk/app-prod-release.apk
+```
+
+Checks: `flutter analyze` and `flutter test` (CI runs both and builds a staging APK on every push).
+
+## Docs
+
+| | |
+|---|---|
+| [`AGENTS.md`](AGENTS.md) | Rules, status, repo map, commands, gotchas |
+| [`docs/auth.md`](docs/auth.md) | Sign-in flows, sessions, Google/Supabase setup, troubleshooting |
+| [`docs/api.md`](docs/api.md) | API endpoints and shapes the app uses |
+| [`docs/environments.md`](docs/environments.md) | Staging vs prod, deploys, signing, devices |
+| [`docs/TODO.md`](docs/TODO.md) | Roadmap, including email sign-in codes + SMTP |
+| [`PLAN.md`](PLAN.md) | Original architecture and phase plan |
