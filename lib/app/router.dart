@@ -4,10 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../core/auth/auth_controller.dart';
 import '../core/auth/session.dart';
+import '../features/activity/activity_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/auth/splash_screen.dart';
+import '../features/compose/compose_screen.dart';
+import '../features/feed/home_screen.dart';
 import '../features/profile/profile_screen.dart';
+import '../features/social/search_screen.dart';
 import '../features/shell/app_shell.dart';
 import '../features/shell/coming_soon.dart';
 
@@ -33,14 +37,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
+      GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
+      GoRoute(path: '/u/:username', builder: (_, s) => UserProfileScreen(username: s.pathParameters['username']!)),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [
           StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/feed',
-              builder: (_, _) => const ComingSoon(title: 'Outstagram', icon: Icons.home_rounded, phase: 'P2'),
-            ),
+            GoRoute(path: '/feed', builder: (_, _) => const HomeScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
@@ -49,16 +52,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/create',
-              builder: (_, _) => const ComingSoon(title: 'New post', icon: Icons.add_a_photo_rounded, phase: 'P2'),
-            ),
+            GoRoute(path: '/create', builder: (_, _) => const ComposeScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/activity',
-              builder: (_, _) => const ComingSoon(title: 'Activity', icon: Icons.favorite_rounded, phase: 'P2'),
-            ),
+            GoRoute(path: '/activity', builder: (_, _) => const ActivityScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
