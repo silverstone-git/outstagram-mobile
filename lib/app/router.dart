@@ -9,11 +9,14 @@ import '../features/auth/register_screen.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/auth/splash_screen.dart';
 import '../features/compose/compose_screen.dart';
+import '../features/exams/exam_result_screen.dart';
+import '../features/exams/exam_runner_screen.dart';
+import '../features/exams/exam_session.dart';
+import '../features/exams/exams_home_screen.dart';
 import '../features/feed/home_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/social/search_screen.dart';
 import '../features/shell/app_shell.dart';
-import '../features/shell/coming_soon.dart';
 
 const _authRoutes = {'/sign-in', '/register'};
 
@@ -39,6 +42,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
       GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
       GoRoute(path: '/u/:username', builder: (_, s) => UserProfileScreen(username: s.pathParameters['username']!)),
+      // Exams run full-screen, outside the tab shell.
+      GoRoute(path: '/exam/run', builder: (_, _) => const ExamRunnerScreen()),
+      GoRoute(
+        path: '/exam/result',
+        builder: (_, s) => s.extra is FinishedExam
+            ? FreshResultScreen(finished: s.extra! as FinishedExam)
+            : const ExamsHomeScreen(), // extra is lost if the route is restored from scratch
+      ),
+      GoRoute(path: '/exam/attempt/:id', builder: (_, s) => AttemptScreen(attemptId: s.pathParameters['id']!)),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [
@@ -46,10 +58,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: '/feed', builder: (_, _) => const HomeScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/exams',
-              builder: (_, _) => const ComingSoon(title: 'Exams', icon: Icons.school_rounded, phase: 'P3'),
-            ),
+            GoRoute(path: '/exams', builder: (_, _) => const ExamsHomeScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/create', builder: (_, _) => const ComposeScreen()),

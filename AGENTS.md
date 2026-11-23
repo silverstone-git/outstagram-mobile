@@ -48,8 +48,8 @@ advantages (see `PLAN.md` §5).
 | P0 Foundation | Flavors, configs, theme, router shell, Dio client, CI | ✅ done |
 | P1 Auth | Password + register, native Google, PKCE browser fallback, refresh tokens | ✅ done (Google sign-in verified on device 2026-11-24: Web client as `serverClientId` + Android client with the debug SHA-1) |
 | P2 Social | Feed/Explore, post card, likes, comments, search, profiles, follow requests, composer | ✅ done (needs on-device QA) |
-| P3 Exams | Dart port of the Pariksha engine, presets, practice, community exams, runner, results, history | ⏳ next (tab shows "Arrives in P3") |
-| P4 AI tutor | SSE streaming, Markdown + LaTeX, skills, quota, library, saved equations | ⏳ |
+| P3 Exams | Dart port of the Pariksha engine, presets, practice, community exams, runner, results, history | ✅ done 2026-11-24 (verified on device; leftovers in `docs/TODO.md` §3) |
+| P4 AI tutor | SSE streaming, Markdown + LaTeX, skills, quota, library, saved equations | ⏳ next (server side works) |
 | P5 Paywall | 429/402/413 → upgrade sheet, Razorpay test | ⏳ |
 | P6 Mobile extras | Push, share-target, result cards, App Links, offline packs | ⏳ |
 | P7 Release | Upload key, Play Billing, account deletion, Play listing | ⏳ |
@@ -81,6 +81,7 @@ lib/
       api_client.dart            dioProvider + AuthInterceptor (pre-expiry refresh, 401 → refresh → retry once), Api wrapper
       api_error.dart             ApiException (FastAPI detail parsing, isPaywall, isNetwork)
     ui/
+      math_text.dart             MathText: inline/display LaTeX (flutter_math_fork), web-compatible clean-up
       avatar.dart                letter avatar coloured by username (the API has no profile photos)
       feedback.dart              showError(context, e)
   features/
@@ -92,7 +93,17 @@ lib/
     profile/                     profile_view.dart (header + posts, follow button, stats), profile_screen.dart
     activity/activity_screen.dart follow requests + approve
     compose/compose_screen.dart  pick/camera → WebP ≤200 kB → /media-upload/bulk → /posts; postsVersionProvider
+    exams/
+      engine/                    pure Dart port of outstagram-web engine.ts: models (raw-JSON questions), scoring, presets
+      exam_api.dart              question bank sampling, community exams, /exam-attempts
+      exam_session.dart          running exam (Notifier) autosaved to shared_preferences (exam_session_v1); resume
+      exams_home_screen.dart     resume card, quick practice, mocks, attempts, community
+      exam_runner_screen.dart    /exam/run full-screen: PageView, palette, timer + auto-submit, wakelock, PopScope
+      exam_result_screen.dart    /exam/result (fresh, saves attempt) and /exam/attempt/:id; score, topics, SWOT, review
 test/auth_test.dart              interceptor/refresh/sign-in/ApiException tests with a fake Dio adapter
+test/exam_engine_test.dart       golden tests: must match outstagram-web's engine.ts exactly (fixtures/exam_golden.json)
+test/math_text_test.dart         LaTeX clean-up/parsing
+tool/exam_golden.ts              regenerates the golden fixtures with bun from ../outstagram-web (run after engine.ts changes)
 config/{staging,prod}.json       public build config (dart-define-from-file)
 android/                         Flutter-generated; flavors in app/build.gradle.kts
 .github/workflows/ci.yml         analyze, test, staging APK artifact
@@ -171,6 +182,11 @@ Host specifics (Windows, user `karti`):
     (`media.fresh_media_url`), so old images work again; `S3_PUBLIC_BASE_URL` would make them permanent (`docs/TODO.md` §2).
 13. Samsung blanks `screencap` while a password field / secure keyboard or the Google account sheet is up. Close the keyboard
     before screenshotting; `adb shell input text` into a field the scrolled layout moved can land in the wrong field.
+14. The theme's `FilledButton` has `minimumSize: Size.fromHeight(54)` (infinite min width). In a `Row` or dialog
+    actions use `compactButton` (`exams_home_screen.dart`) or wrap it in `Expanded`, or it overflows/disappears.
+15. `flutter_math_fork`'s `texBreak()` drops the space after the operator it splits at; `MathText` re-inserts one.
+16. Exam scoring must stay identical to the web. Change `engine.ts` and `engine.dart` together and regenerate the
+    golden fixtures (`bun tool/exam_golden.ts`).
 
 ---
 

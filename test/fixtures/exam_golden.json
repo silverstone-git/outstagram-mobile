@@ -1,0 +1,1366 @@
+[
+  {
+    "name": "gate-like two sections with negatives",
+    "config": {
+      "name": "GATE fixture",
+      "settings": {
+        "timerHours": 3,
+        "timerMinutes": 0,
+        "shuffleQuestions": false,
+        "shuffleOptions": false
+      },
+      "sections": [
+        {
+          "id": "s1",
+          "name": "1 Mark",
+          "marking": {
+            "positive": 1,
+            "negative": 0.33
+          },
+          "questions": [
+            {
+              "id": "a1",
+              "type": "MCQ",
+              "question": "Q a1 $\\\\alpha$",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_label": 2,
+              "topic": "Quantum",
+              "explanation": "because"
+            },
+            {
+              "id": "a2",
+              "type": "MCQ",
+              "question": "Q a2 $\\\\alpha$",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_label": 3,
+              "topic": "Quantum",
+              "explanation": "because"
+            },
+            {
+              "id": "a3",
+              "type": "MCQ",
+              "question": "Q a3 $\\\\alpha$",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_label": 1,
+              "topic": "EM",
+              "explanation": "because"
+            },
+            {
+              "id": "a4",
+              "type": "MSQ",
+              "question": "MSQ a4",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_labels": [
+                1,
+                3
+              ],
+              "topic": "EM",
+              "explanation": ""
+            },
+            {
+              "id": "a5",
+              "type": "NAT",
+              "question": "NAT a5",
+              "answer_range": {
+                "min": 1.5,
+                "max": 1.6
+              },
+              "topic": "Thermo",
+              "explanation": ""
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "name": "2 Mark",
+          "marking": {
+            "positive": 2,
+            "negative": 0.66
+          },
+          "questions": [
+            {
+              "id": "b1",
+              "type": "MCQ",
+              "question": "Q b1 $\\\\alpha$",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_label": 4,
+              "topic": "Quantum",
+              "explanation": "because"
+            },
+            {
+              "id": "b2",
+              "type": "MSQ",
+              "question": "MSQ b2",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_labels": [
+                2,
+                4,
+                1
+              ],
+              "topic": "Thermo",
+              "explanation": ""
+            },
+            {
+              "id": "b3",
+              "type": "NAT",
+              "question": "NAT b3",
+              "answer_value": "0.25",
+              "topic": "EM",
+              "explanation": ""
+            },
+            {
+              "id": "b4",
+              "type": "MCQ",
+              "question": "Q b4 $\\\\alpha$",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_label": 1,
+              "topic": "Optics",
+              "explanation": "because"
+            }
+          ]
+        }
+      ]
+    },
+    "answers": {
+      "a1": {
+        "label": 2
+      },
+      "a2": {
+        "label": 1,
+        "isFlagged": true
+      },
+      "a4": {
+        "labels": [
+          3,
+          1
+        ]
+      },
+      "a5": {
+        "text": "1.55"
+      },
+      "b1": {
+        "label": 4
+      },
+      "b2": {
+        "labels": [
+          1,
+          2
+        ]
+      },
+      "b3": {
+        "text": "0.250"
+      },
+      "b4": {
+        "label": null,
+        "isFlagged": true
+      }
+    },
+    "timers": {
+      "a1": 30.4,
+      "a2": 95.6,
+      "a3": 3,
+      "a4": 61.2,
+      "a5": 120,
+      "b1": 40,
+      "b2": 200.5,
+      "b3": 75,
+      "b4": 2
+    },
+    "startedAt": 1763999100000,
+    "now": 1764000000000,
+    "expected": {
+      "questionIds": [
+        "a1",
+        "a2",
+        "a3",
+        "a4",
+        "a5",
+        "b1",
+        "b2",
+        "b3",
+        "b4"
+      ],
+      "maxScore": 13,
+      "id": "res-1764000000000",
+      "examName": "GATE fixture",
+      "date": 1764000000000,
+      "score": 6.01,
+      "totalQuestions": 9,
+      "correctAnswers": 5,
+      "incorrectAnswers": 4,
+      "accuracy": 55.55555555555556,
+      "totalTimeTaken": 900,
+      "timePerTopic": {
+        "Quantum": 166,
+        "EM": 139.2,
+        "Thermo": 320.5,
+        "Optics": 2
+      },
+      "accuracyPerTopic": {
+        "Quantum": 0.6666666666666666,
+        "EM": 0.6666666666666666,
+        "Thermo": 0.5,
+        "Optics": 0
+      },
+      "answers": [
+        {
+          "questionId": "a1",
+          "type": "MCQ",
+          "selectedOptionLabel": 2,
+          "isCorrect": true,
+          "timeSpent": 30
+        },
+        {
+          "questionId": "a2",
+          "type": "MCQ",
+          "selectedOptionLabel": 1,
+          "isCorrect": false,
+          "timeSpent": 96,
+          "isFlagged": true
+        },
+        {
+          "questionId": "a3",
+          "type": "MCQ",
+          "selectedOptionLabel": null,
+          "isCorrect": false,
+          "timeSpent": 3
+        },
+        {
+          "questionId": "a4",
+          "type": "MSQ",
+          "selectedOptionLabel": null,
+          "selectedOptionLabels": [
+            3,
+            1
+          ],
+          "isCorrect": true,
+          "timeSpent": 61
+        },
+        {
+          "questionId": "a5",
+          "type": "NAT",
+          "selectedOptionLabel": null,
+          "enteredAnswer": "1.55",
+          "isCorrect": true,
+          "timeSpent": 120
+        },
+        {
+          "questionId": "b1",
+          "type": "MCQ",
+          "selectedOptionLabel": 4,
+          "isCorrect": true,
+          "timeSpent": 40
+        },
+        {
+          "questionId": "b2",
+          "type": "MSQ",
+          "selectedOptionLabel": null,
+          "selectedOptionLabels": [
+            1,
+            2
+          ],
+          "isCorrect": false,
+          "timeSpent": 201
+        },
+        {
+          "questionId": "b3",
+          "type": "NAT",
+          "selectedOptionLabel": null,
+          "enteredAnswer": "0.250",
+          "isCorrect": true,
+          "timeSpent": 75
+        },
+        {
+          "questionId": "b4",
+          "type": "MCQ",
+          "selectedOptionLabel": null,
+          "isCorrect": false,
+          "timeSpent": 2,
+          "isFlagged": true
+        }
+      ],
+      "sectionScores": {
+        "s1": 2.67,
+        "s2": 3.34
+      },
+      "swot": {
+        "strengths": [
+          "No standout strengths identified yet. Keep practicing!"
+        ],
+        "weaknesses": [
+          "Thermo: Conceptual gaps. Low accuracy and slow speed need fundamental review."
+        ],
+        "opportunities": [
+          "Focus on increasing speed in topics where you have good accuracy."
+        ],
+        "threats": [
+          "Optics: Accuracy risk. Low accuracy at speed suggests guessing."
+        ]
+      }
+    }
+  },
+  {
+    "name": "csir-like maxAttempts caps the first N attempted",
+    "config": {
+      "name": "CSIR fixture",
+      "sections": [
+        {
+          "id": "pb",
+          "name": "Part B",
+          "marking": {
+            "positive": 3.5,
+            "negative": 0.875
+          },
+          "questions": [
+            {
+              "id": "p1",
+              "type": "MCQ",
+              "question": "Q p1 $\\\\alpha$",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_label": 1,
+              "topic": "Math",
+              "explanation": "because"
+            },
+            {
+              "id": "p2",
+              "type": "MCQ",
+              "question": "Q p2 $\\\\alpha$",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_label": 2,
+              "topic": "Math",
+              "explanation": "because"
+            }
+          ]
+        },
+        {
+          "id": "pc",
+          "name": "Part C",
+          "marking": {
+            "positive": 5,
+            "negative": 1.25
+          },
+          "maxAttempts": 2,
+          "questions": [
+            {
+              "id": "c1",
+              "type": "MCQ",
+              "question": "Q c1 $\\\\alpha$",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_label": 1,
+              "topic": "QM",
+              "explanation": "because"
+            },
+            {
+              "id": "c2",
+              "type": "MCQ",
+              "question": "Q c2 $\\\\alpha$",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_label": 2,
+              "topic": "QM",
+              "explanation": "because"
+            },
+            {
+              "id": "c3",
+              "type": "MCQ",
+              "question": "Q c3 $\\\\alpha$",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_label": 3,
+              "topic": "QM",
+              "explanation": "because"
+            },
+            {
+              "id": "c4",
+              "type": "MCQ",
+              "question": "Q c4 $\\\\alpha$",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_label": 4,
+              "topic": "Stat",
+              "explanation": "because"
+            },
+            {
+              "id": "c5",
+              "type": "MCQ",
+              "question": "Q c5 $\\\\alpha$",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_label": 1,
+              "topic": "Stat",
+              "explanation": "because"
+            }
+          ]
+        }
+      ]
+    },
+    "answers": {
+      "p1": {
+        "label": 1
+      },
+      "p2": {
+        "label": 3
+      },
+      "c1": {
+        "label": 2
+      },
+      "c3": {
+        "label": 3
+      },
+      "c4": {
+        "label": 4
+      },
+      "c5": {
+        "label": 1
+      }
+    },
+    "timers": {
+      "p1": 10,
+      "p2": 20,
+      "c1": 300,
+      "c2": 0,
+      "c3": 50,
+      "c4": 400,
+      "c5": 5
+    },
+    "startedAt": 1763998800000,
+    "now": 1764000000000,
+    "expected": {
+      "questionIds": [
+        "p1",
+        "p2",
+        "c1",
+        "c2",
+        "c3",
+        "c4",
+        "c5"
+      ],
+      "maxScore": 32,
+      "id": "res-1764000000000",
+      "examName": "CSIR fixture",
+      "date": 1764000000000,
+      "score": 6.375,
+      "totalQuestions": 7,
+      "correctAnswers": 2,
+      "incorrectAnswers": 5,
+      "accuracy": 28.57142857142857,
+      "totalTimeTaken": 1200,
+      "timePerTopic": {
+        "Math": 30,
+        "QM": 350,
+        "Stat": 405
+      },
+      "accuracyPerTopic": {
+        "Math": 0.5,
+        "QM": 0.3333333333333333,
+        "Stat": 1
+      },
+      "answers": [
+        {
+          "questionId": "p1",
+          "type": "MCQ",
+          "selectedOptionLabel": 1,
+          "isCorrect": true,
+          "timeSpent": 10
+        },
+        {
+          "questionId": "p2",
+          "type": "MCQ",
+          "selectedOptionLabel": 3,
+          "isCorrect": false,
+          "timeSpent": 20
+        },
+        {
+          "questionId": "c1",
+          "type": "MCQ",
+          "selectedOptionLabel": 2,
+          "isCorrect": false,
+          "timeSpent": 300
+        },
+        {
+          "questionId": "c2",
+          "type": "MCQ",
+          "selectedOptionLabel": null,
+          "isCorrect": false,
+          "timeSpent": 0
+        },
+        {
+          "questionId": "c3",
+          "type": "MCQ",
+          "selectedOptionLabel": 3,
+          "isCorrect": true,
+          "timeSpent": 50
+        },
+        {
+          "questionId": "c4",
+          "type": "MCQ",
+          "selectedOptionLabel": 4,
+          "isCorrect": true,
+          "timeSpent": 400
+        },
+        {
+          "questionId": "c5",
+          "type": "MCQ",
+          "selectedOptionLabel": 1,
+          "isCorrect": true,
+          "timeSpent": 5
+        }
+      ],
+      "sectionScores": {
+        "pb": 2.625,
+        "pc": 3.75
+      },
+      "swot": {
+        "strengths": [
+          "No standout strengths identified yet. Keep practicing!"
+        ],
+        "weaknesses": [
+          "No major conceptual weaknesses identified. Maintain consistency."
+        ],
+        "opportunities": [
+          "Focus on increasing speed in topics where you have good accuracy."
+        ],
+        "threats": [
+          "Math: Accuracy risk. Low accuracy at speed suggests guessing.",
+          "QM: Accuracy risk. Low accuracy at speed suggests guessing."
+        ]
+      }
+    }
+  },
+  {
+    "name": "legacy flat questions, global marking, questionCount cap, missing ids",
+    "config": {
+      "name": "Legacy fixture",
+      "settings": {
+        "timerHours": 0,
+        "timerMinutes": 45,
+        "shuffleQuestions": false,
+        "shuffleOptions": false,
+        "questionCount": 4,
+        "positiveMarking": 3,
+        "negativeMarking": 1
+      },
+      "questions": [
+        {
+          "question": "no id 1",
+          "options": [
+            {
+              "label": 1,
+              "value": "$x_1$ option 1"
+            },
+            {
+              "label": 2,
+              "value": "$x_2$ option 2"
+            },
+            {
+              "label": 3,
+              "value": "$x_3$ option 3"
+            },
+            {
+              "label": 4,
+              "value": "$x_4$ option 4"
+            }
+          ],
+          "answer_label": 1,
+          "topic": "Mech",
+          "explanation": ""
+        },
+        {
+          "question": "no id 2",
+          "options": [
+            {
+              "label": 1,
+              "value": "$x_1$ option 1"
+            },
+            {
+              "label": 2,
+              "value": "$x_2$ option 2"
+            },
+            {
+              "label": 3,
+              "value": "$x_3$ option 3"
+            },
+            {
+              "label": 4,
+              "value": "$x_4$ option 4"
+            }
+          ],
+          "answer_label": 2,
+          "topic": "Mech",
+          "explanation": ""
+        },
+        {
+          "question": "no id 3",
+          "type": "NAT",
+          "answer_range": {
+            "min": -1,
+            "max": 1
+          },
+          "topic": "Elec",
+          "explanation": ""
+        },
+        {
+          "question": "no id 4",
+          "options": [
+            {
+              "label": 1,
+              "value": "$x_1$ option 1"
+            },
+            {
+              "label": 2,
+              "value": "$x_2$ option 2"
+            },
+            {
+              "label": 3,
+              "value": "$x_3$ option 3"
+            },
+            {
+              "label": 4,
+              "value": "$x_4$ option 4"
+            }
+          ],
+          "answer_label": 4,
+          "topic": "Elec",
+          "explanation": ""
+        },
+        {
+          "question": "no id 5 (cut by questionCount)",
+          "options": [
+            {
+              "label": 1,
+              "value": "$x_1$ option 1"
+            },
+            {
+              "label": 2,
+              "value": "$x_2$ option 2"
+            },
+            {
+              "label": 3,
+              "value": "$x_3$ option 3"
+            },
+            {
+              "label": 4,
+              "value": "$x_4$ option 4"
+            }
+          ],
+          "answer_label": 1,
+          "topic": "Mech",
+          "explanation": ""
+        }
+      ]
+    },
+    "answers": {
+      "q-0": {
+        "label": 1
+      },
+      "q-1": {
+        "label": 1
+      },
+      "q-2": {
+        "text": "-1"
+      },
+      "q-4": {
+        "label": 1
+      }
+    },
+    "timers": {
+      "q-0": 12,
+      "q-1": 13,
+      "q-2": 90,
+      "q-3": 1
+    },
+    "startedAt": 1763999700000,
+    "now": 1764000000000,
+    "expected": {
+      "questionIds": [
+        "q-0",
+        "q-1",
+        "q-2",
+        "q-3"
+      ],
+      "maxScore": 12,
+      "id": "res-1764000000000",
+      "examName": "Legacy fixture",
+      "date": 1764000000000,
+      "score": 5,
+      "totalQuestions": 4,
+      "correctAnswers": 2,
+      "incorrectAnswers": 2,
+      "accuracy": 50,
+      "totalTimeTaken": 300,
+      "timePerTopic": {
+        "Mech": 25,
+        "Elec": 91
+      },
+      "accuracyPerTopic": {
+        "Mech": 0.5,
+        "Elec": 0.5
+      },
+      "answers": [
+        {
+          "questionId": "q-0",
+          "type": "MCQ",
+          "selectedOptionLabel": 1,
+          "isCorrect": true,
+          "timeSpent": 12
+        },
+        {
+          "questionId": "q-1",
+          "type": "MCQ",
+          "selectedOptionLabel": 1,
+          "isCorrect": false,
+          "timeSpent": 13
+        },
+        {
+          "questionId": "q-2",
+          "type": "NAT",
+          "selectedOptionLabel": null,
+          "enteredAnswer": "-1",
+          "isCorrect": true,
+          "timeSpent": 90
+        },
+        {
+          "questionId": "q-3",
+          "type": "MCQ",
+          "selectedOptionLabel": null,
+          "isCorrect": false,
+          "timeSpent": 1
+        }
+      ],
+      "sectionScores": {
+        "default-section": 5
+      },
+      "swot": {
+        "strengths": [
+          "No standout strengths identified yet. Keep practicing!"
+        ],
+        "weaknesses": [
+          "No major conceptual weaknesses identified. Maintain consistency."
+        ],
+        "opportunities": [
+          "Focus on increasing speed in topics where you have good accuracy."
+        ],
+        "threats": [
+          "Mech: Accuracy risk. Low accuracy at speed suggests guessing.",
+          "Elec: Accuracy risk. Low accuracy at speed suggests guessing."
+        ]
+      }
+    }
+  },
+  {
+    "name": "NAT parsing edge cases (JS parseFloat semantics)",
+    "config": {
+      "name": "NAT fixture",
+      "sections": [
+        {
+          "id": "n",
+          "name": "NAT",
+          "marking": {
+            "positive": 2,
+            "negative": 0.5
+          },
+          "questions": [
+            {
+              "id": "n1",
+              "type": "NAT",
+              "question": "NAT n1",
+              "answer_range": {
+                "min": 1,
+                "max": 2
+              },
+              "topic": "T",
+              "explanation": ""
+            },
+            {
+              "id": "n2",
+              "type": "NAT",
+              "question": "NAT n2",
+              "answer_range": {
+                "min": 1,
+                "max": 2
+              },
+              "topic": "T",
+              "explanation": ""
+            },
+            {
+              "id": "n3",
+              "type": "NAT",
+              "question": "NAT n3",
+              "answer_range": {
+                "min": 1,
+                "max": 2
+              },
+              "topic": "T",
+              "explanation": ""
+            },
+            {
+              "id": "n4",
+              "type": "NAT",
+              "question": "NAT n4",
+              "answer_value": "3",
+              "topic": "T",
+              "explanation": ""
+            },
+            {
+              "id": "n5",
+              "type": "NAT",
+              "question": "NAT n5",
+              "answer_value": "1e3",
+              "topic": "T",
+              "explanation": ""
+            },
+            {
+              "id": "n6",
+              "type": "NAT",
+              "question": "NAT n6",
+              "answer_range": {
+                "min": 0,
+                "max": 0
+              },
+              "topic": "T",
+              "explanation": ""
+            },
+            {
+              "id": "n7",
+              "type": "NAT",
+              "question": "NAT n7",
+              "answer_value": "2.5",
+              "topic": "T",
+              "explanation": ""
+            },
+            {
+              "id": "n8",
+              "type": "NAT",
+              "question": "NAT n8",
+              "answer_range": {
+                "min": 5,
+                "max": 6
+              },
+              "topic": "U",
+              "explanation": ""
+            }
+          ]
+        }
+      ]
+    },
+    "answers": {
+      "n1": {
+        "text": "2"
+      },
+      "n2": {
+        "text": "1e"
+      },
+      "n3": {
+        "text": "abc"
+      },
+      "n4": {
+        "text": "3.0"
+      },
+      "n5": {
+        "text": "1000"
+      },
+      "n6": {
+        "text": "-0"
+      },
+      "n7": {
+        "text": "2.5.1"
+      },
+      "n8": {
+        "text": ""
+      }
+    },
+    "timers": {
+      "n1": 5,
+      "n2": 5,
+      "n3": 5,
+      "n4": 5,
+      "n5": 5,
+      "n6": 5,
+      "n7": 5,
+      "n8": 5
+    },
+    "startedAt": 1763999940000,
+    "now": 1764000000000,
+    "expected": {
+      "questionIds": [
+        "n1",
+        "n2",
+        "n3",
+        "n4",
+        "n5",
+        "n6",
+        "n7",
+        "n8"
+      ],
+      "maxScore": 16,
+      "id": "res-1764000000000",
+      "examName": "NAT fixture",
+      "date": 1764000000000,
+      "score": 11.5,
+      "totalQuestions": 8,
+      "correctAnswers": 6,
+      "incorrectAnswers": 2,
+      "accuracy": 75,
+      "totalTimeTaken": 60,
+      "timePerTopic": {
+        "T": 35,
+        "U": 5
+      },
+      "accuracyPerTopic": {
+        "T": 0.8571428571428571,
+        "U": 0
+      },
+      "answers": [
+        {
+          "questionId": "n1",
+          "type": "NAT",
+          "selectedOptionLabel": null,
+          "enteredAnswer": "2",
+          "isCorrect": true,
+          "timeSpent": 5
+        },
+        {
+          "questionId": "n2",
+          "type": "NAT",
+          "selectedOptionLabel": null,
+          "enteredAnswer": "1e",
+          "isCorrect": true,
+          "timeSpent": 5
+        },
+        {
+          "questionId": "n3",
+          "type": "NAT",
+          "selectedOptionLabel": null,
+          "enteredAnswer": "abc",
+          "isCorrect": false,
+          "timeSpent": 5
+        },
+        {
+          "questionId": "n4",
+          "type": "NAT",
+          "selectedOptionLabel": null,
+          "enteredAnswer": "3.0",
+          "isCorrect": true,
+          "timeSpent": 5
+        },
+        {
+          "questionId": "n5",
+          "type": "NAT",
+          "selectedOptionLabel": null,
+          "enteredAnswer": "1000",
+          "isCorrect": true,
+          "timeSpent": 5
+        },
+        {
+          "questionId": "n6",
+          "type": "NAT",
+          "selectedOptionLabel": null,
+          "enteredAnswer": "-0",
+          "isCorrect": true,
+          "timeSpent": 5
+        },
+        {
+          "questionId": "n7",
+          "type": "NAT",
+          "selectedOptionLabel": null,
+          "enteredAnswer": "2.5.1",
+          "isCorrect": true,
+          "timeSpent": 5
+        },
+        {
+          "questionId": "n8",
+          "type": "NAT",
+          "selectedOptionLabel": null,
+          "enteredAnswer": "",
+          "isCorrect": false,
+          "timeSpent": 5
+        }
+      ],
+      "sectionScores": {
+        "n": 11.5
+      },
+      "swot": {
+        "strengths": [
+          "T: Mastered. High accuracy with excellent pace."
+        ],
+        "weaknesses": [
+          "No major conceptual weaknesses identified. Maintain consistency."
+        ],
+        "opportunities": [
+          "Focus on increasing speed in topics where you have good accuracy."
+        ],
+        "threats": [
+          "U: Accuracy risk. Low accuracy at speed suggests guessing."
+        ]
+      }
+    }
+  },
+  {
+    "name": "nothing answered",
+    "config": {
+      "name": "Empty fixture",
+      "sections": [
+        {
+          "id": "e",
+          "name": "E",
+          "marking": {
+            "positive": 1,
+            "negative": 0.25
+          },
+          "questions": [
+            {
+              "id": "e1",
+              "type": "MCQ",
+              "question": "Q e1 $\\\\alpha$",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_label": 1,
+              "topic": "A",
+              "explanation": "because"
+            },
+            {
+              "id": "e2",
+              "type": "MSQ",
+              "question": "MSQ e2",
+              "options": [
+                {
+                  "label": 1,
+                  "value": "$x_1$ option 1"
+                },
+                {
+                  "label": 2,
+                  "value": "$x_2$ option 2"
+                },
+                {
+                  "label": 3,
+                  "value": "$x_3$ option 3"
+                },
+                {
+                  "label": 4,
+                  "value": "$x_4$ option 4"
+                }
+              ],
+              "answer_labels": [
+                2
+              ],
+              "topic": "B",
+              "explanation": ""
+            }
+          ]
+        }
+      ]
+    },
+    "answers": {},
+    "timers": {},
+    "startedAt": 1763999990000,
+    "now": 1764000000000,
+    "expected": {
+      "questionIds": [
+        "e1",
+        "e2"
+      ],
+      "maxScore": 2,
+      "id": "res-1764000000000",
+      "examName": "Empty fixture",
+      "date": 1764000000000,
+      "score": 0,
+      "totalQuestions": 2,
+      "correctAnswers": 0,
+      "incorrectAnswers": 2,
+      "accuracy": 0,
+      "totalTimeTaken": 10,
+      "timePerTopic": {
+        "A": 0,
+        "B": 0
+      },
+      "accuracyPerTopic": {
+        "A": 0,
+        "B": 0
+      },
+      "answers": [
+        {
+          "questionId": "e1",
+          "type": "MCQ",
+          "selectedOptionLabel": null,
+          "isCorrect": false,
+          "timeSpent": 0
+        },
+        {
+          "questionId": "e2",
+          "type": "MSQ",
+          "selectedOptionLabel": null,
+          "isCorrect": false,
+          "timeSpent": 0
+        }
+      ],
+      "sectionScores": {
+        "e": 0
+      },
+      "swot": {
+        "strengths": [
+          "No standout strengths identified yet. Keep practicing!"
+        ],
+        "weaknesses": [
+          "No major conceptual weaknesses identified. Maintain consistency."
+        ],
+        "opportunities": [
+          "Focus on increasing speed in topics where you have good accuracy."
+        ],
+        "threats": [
+          "A: Accuracy risk. Low accuracy at speed suggests guessing.",
+          "B: Accuracy risk. Low accuracy at speed suggests guessing."
+        ]
+      }
+    }
+  }
+]

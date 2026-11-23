@@ -71,7 +71,19 @@ Quirks:
   Pro: 15 MB. The app compresses to WebP ≤200 kB on device (`compose_screen.dart`) regardless of plan, for now.
 - Storage is Cloudflare R2 (bucket `outstagram`).
 
-## Exams, tutor, billing (to build in P3–P5)
+## Exams (implemented in the app, `lib/features/exams/exam_api.dart`)
+
+| Call | Notes |
+|---|---|
+| `GET /api/question_bank/sample?topic=<slug>&count=n` | no auth needed; slug = topic name lower-cased, spaces → `_` |
+| `GET /pariksha?page=n` | community exams, 10 per page: `{exam_id, exam_title, datetime_uploaded}` |
+| `GET /pariksha/{id}` | `sections` (newer) or `exam_json_str` (a question list or a full config) |
+| `POST /exam-attempts` | `{exam_id?, exam_title, score, max_score, accuracy, total_questions, total_time_seconds, result}`; `result` is the web's `ExamResult` JSON (≤ 2 MB). The app writes the same shape, so attempts open on both clients |
+| `GET /exam-attempts?page=n`, `GET /exam-attempts/{id}` | summaries; full attempt adds `result` |
+
+Question text is LaTeX with **doubled backslashes** (`$\theta$` in the JSON); `MathText` collapses them like the web.
+
+## Tutor, billing (to build in P4–P5)
 
 Same endpoints the web uses; see `outstagram-server/README.md` "Exam attempts and AI tutor API", "Stats",
 "Billing", and the web implementation in `outstagram-web/src/features/exams/` (`engine.ts` is the scoring source

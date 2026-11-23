@@ -46,6 +46,8 @@ dependencies:
   cached_network_image: ^4.0.3
   image_picker: ^1.2.4
   flutter_image_compress: ^2.5.1
+  flutter_math_fork: ^0.7.4
+  wakelock_plus: ^1.8.2
 
 dev_dependencies:
   flutter_test:

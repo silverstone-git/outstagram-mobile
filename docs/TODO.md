@@ -74,25 +74,21 @@ doing for permanent, CDN-cacheable links:
 - Backfill: a one-off script that rewrites `mediaurl.url` from presigned → `<base>/<object_key>`
   (object key = last path segment before `?`). Take a DB backup first; test on staging.
 
-## 3. P3: Exams (next big feature)
+## 3. P3: Exams ✅ (2026-11-24)
 
-Port `outstagram-web/src/features/exams/` to `lib/features/exams/`:
-- `engine/` pure Dart (no Flutter imports): `normalizeExamConfig`, `prepareQuestions` (shuffle), `isQuestionCorrect`
-  (MCQ / MSQ / NAT range-or-exact), `scoreExam` (sections, negative marks, `maxAttempts` = best N count),
-  SWOT, per-topic accuracy/time, presets (`SUBJECT_GROUPS`, `PATTERNS`), quick practice.
-  **Golden tests:** a small Bun script runs the TS `scoreExam` over fixture exams/answers and writes JSON; Dart tests
-  must produce identical numbers.
-- Exams home: presets (GATE, CSIR NET, TIFR, BARC), server presets (`/api/exam_presets`, currently 0 on prod),
-  quick practice by subject, community exams (`/pariksha?page=`, 49 on prod), my attempts (`/exam-attempts`).
-- Runner: full-screen route outside the shell; sticky timer; swipe between questions; bottom-sheet palette
-  (answered / flagged / unseen); MCQ/MSQ/NAT inputs; LaTeX via `flutter_math_fork`; `wakelock_plus`; `PopScope`
-  confirm on back; haptics; auto-submit at 0. **Autosave** every change (drift or JSON in app documents dir) so an
-  attempt survives the app being killed; offer "Resume" on the Exams tab.
-- Results: score, accuracy, time, section scores, topic chart (`fl_chart`), SWOT, filtered review with explanations;
-  `POST /exam-attempts` (result JSON ≤ 2 MB); "Share to feed" → composer prefilled with category Exam Result.
-- Question images: `resolveImagePath` in `engine.ts` (R2 public endpoint for relative paths).
+Done and verified on device (S22, prod): quick practice, mocks, community exams, runner, kill-and-resume, results,
+review, attempts history (opens attempts made on the web too). Leftovers:
+- [ ] Server exam presets (`/api/exam_presets`, 0 on prod) aren't listed yet.
+- [ ] "Share to feed" from results (composer prefilled, category Exam Result) and result cards (P6).
+- [ ] Community exams: only page 1 (10) is shown; add paging.
+- [ ] Topic chart is plain bars (no `fl_chart`); fine for now.
+- [ ] Web label says GATE "65 Qs" but the pattern sums to 61 (`outstagram-web` `PRESETS`); the app says 61.
 
-## 4. P4: AI tutor
+## 4. P4: AI tutor  ← next
+
+Server side verified 2026-11-24: `/chat/stream` answers in ~15 s with citations and knows the user's answer.
+Entry point in the app: a "Ask the AI tutor" button on each review card (`exam_result_screen.dart` `_ReviewCard`);
+the attempt id comes from `saveAttempt` (fresh) or the route (`/exam/attempt/:id`).
 
 SSE client over Dio `ResponseType.stream` for `POST /exam-attempts/{id}/chat/stream` (`status`, `meta`, `delta`, `done`,
 `error` events; limit errors arrive as normal HTTP errors before the stream). Markdown + LaTeX rendering with citations,
