@@ -7,6 +7,11 @@ import 'engine/engine.dart';
 
 final examApiProvider = Provider<ExamApi>((ref) => ExamApi(ref.watch(apiProvider)));
 
+/// A saved attempt (result screen, tutor question header).
+final attemptProvider = FutureProvider.autoDispose.family<Attempt, String>(
+  (ref, id) => ref.watch(examApiProvider).attempt(id),
+);
+
 DateTime _utc(String s) => DateTime.parse(s.endsWith('Z') || s.contains('+') ? s : '${s}Z').toLocal();
 
 class CommunityExam {

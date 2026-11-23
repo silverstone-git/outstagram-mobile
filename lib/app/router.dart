@@ -16,6 +16,8 @@ import '../features/exams/exams_home_screen.dart';
 import '../features/feed/home_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/social/search_screen.dart';
+import '../features/tutor/tutor_chat_screen.dart';
+import '../features/tutor/tutor_library_screen.dart';
 import '../features/shell/app_shell.dart';
 
 const _authRoutes = {'/sign-in', '/register'};
@@ -51,6 +53,15 @@ final routerProvider = Provider<GoRouter>((ref) {
             : const ExamsHomeScreen(), // extra is lost if the route is restored from scratch
       ),
       GoRoute(path: '/exam/attempt/:id', builder: (_, s) => AttemptScreen(attemptId: s.pathParameters['id']!)),
+      GoRoute(path: '/tutor', builder: (_, _) => const TutorLibraryScreen()),
+      GoRoute(
+        path: '/tutor/:attemptId/:questionId',
+        builder: (_, s) => TutorChatScreen(
+          attemptId: s.pathParameters['attemptId']!,
+          questionId: s.pathParameters['questionId']!,
+          question: s.extra is TutorQuestion ? s.extra! as TutorQuestion : null,
+        ),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [

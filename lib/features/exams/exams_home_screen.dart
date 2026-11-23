@@ -82,7 +82,16 @@ class _ExamsHomeScreenState extends ConsumerState<ExamsHomeScreen> {
     final cs = Theme.of(context).colorScheme;
     final saved = ref.watch(savedSessionProvider).value;
     return Scaffold(
-      appBar: AppBar(title: const Text('Exams')),
+      appBar: AppBar(
+        title: const Text('Exams'),
+        actions: [
+          IconButton(
+            tooltip: 'Tutor library',
+            icon: const Icon(Icons.auto_awesome_outlined),
+            onPressed: () => context.push('/tutor'),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(

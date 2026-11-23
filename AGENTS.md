@@ -11,7 +11,7 @@ status, the repository map and the commands. Deep dives live in `docs/`:
 | `docs/TODO.md` | Roadmap and open work, including the email sign-in code + SMTP plan |
 | `PLAN.md` | The original product/architecture plan (phases P0–P7, mobile-only extras). Background, not status |
 
-Last updated: 2026-11-24 (Google sign-in verified; media URLs re-signed server-side).
+Last updated: 2026-11-24 (P4 AI tutor built; needs on-device QA).
 
 ---
 
@@ -49,7 +49,7 @@ advantages (see `PLAN.md` §5).
 | P1 Auth | Password + register, native Google, PKCE browser fallback, refresh tokens | ✅ done (Google sign-in verified on device 2026-11-24: Web client as `serverClientId` + Android client with the debug SHA-1) |
 | P2 Social | Feed/Explore, post card, likes, comments, search, profiles, follow requests, composer | ✅ done (needs on-device QA) |
 | P3 Exams | Dart port of the Pariksha engine, presets, practice, community exams, runner, results, history | ✅ done 2026-11-24 (verified on device; leftovers in `docs/TODO.md` §3) |
-| P4 AI tutor | SSE streaming, Markdown + LaTeX, skills, quota, library, saved equations | ⏳ next (server side works) |
+| P4 AI tutor | SSE streaming, Markdown + LaTeX, skills, quota, library, saved equations, voice input | ✅ built 2026-11-24 (unit/widget tested; on-device QA pending, `docs/TODO.md` §4) |
 | P5 Paywall | 429/402/413 → upgrade sheet, Razorpay test | ⏳ |
 | P6 Mobile extras | Push, share-target, result cards, App Links, offline packs | ⏳ |
 | P7 Release | Upload key, Play Billing, account deletion, Play listing | ⏳ |
@@ -99,10 +99,19 @@ lib/
       exam_session.dart          running exam (Notifier) autosaved to shared_preferences (exam_session_v1); resume
       exams_home_screen.dart     resume card, quick practice, mocks, attempts, community
       exam_runner_screen.dart    /exam/run full-screen: PageView, palette, timer + auto-submit, wakelock, PopScope
-      exam_result_screen.dart    /exam/result (fresh, saves attempt) and /exam/attempt/:id; score, topics, SWOT, review
+      exam_result_screen.dart    /exam/result (fresh, saves attempt) and /exam/attempt/:id; score, topics, SWOT, review,
+                                 "Ask the AI tutor" per question (needs the saved attempt id)
+    tutor/
+      models.dart                ChatMessage, Citation, Quota, Skill(List), ChatThread, ThreadUsage, FavoriteEquation, TutorEvent
+      sse.dart                   decodeSse: byte stream → SSE events (chunk-boundary/CRLF/UTF-8 safe)
+      tutor_api.dart             chat history, ask() stream, skills/quota/threads/favourites; providers; streamError()
+      tutor_markdown.dart        TutorMarkdown (flutter_markdown_plus + $ math syntaxes), normalizeMath (web port), long-press pick
+      tutor_chat_screen.dart     /tutor/:attemptId/:questionId: header, skill chips, streaming bubbles, citations, voice, quota
+      tutor_library_screen.dart  /tutor: Chats (usage bar, delete) and Equations (copy, delete, open chat)
 test/auth_test.dart              interceptor/refresh/sign-in/ApiException tests with a fake Dio adapter
 test/exam_engine_test.dart       golden tests: must match outstagram-web's engine.ts exactly (fixtures/exam_golden.json)
 test/math_text_test.dart         LaTeX clean-up/parsing
+test/tutor_test.dart             SSE decoding, stream errors (429/402/404 bodies), normalizeMath, TutorMarkdown widget
 tool/exam_golden.ts              regenerates the golden fixtures with bun from ../outstagram-web (run after engine.ts changes)
 config/{staging,prod}.json       public build config (dart-define-from-file)
 android/                         Flutter-generated; flavors in app/build.gradle.kts
@@ -187,6 +196,11 @@ Host specifics (Windows, user `karti`):
 15. `flutter_math_fork`'s `texBreak()` drops the space after the operator it splits at; `MathText` re-inserts one.
 16. Exam scoring must stay identical to the web. Change `engine.ts` and `engine.dart` together and regenerate the
     golden fixtures (`bun tool/exam_golden.ts`).
+17. With `ResponseType.stream`, an **error** response's body is still a byte stream, so `ApiException.from` can't see
+    FastAPI's `detail`. Decode it first with `streamError()` (`tutor_api.dart`); paywall codes/quota depend on it.
+18. flutter_markdown_plus wraps non-text inline widgets into a `Wrap`, which breaks paragraphs. Inline builders must return
+    a `Text.rich(WidgetSpan…)` so they merge into the paragraph's RichText (`_MathBuilder`).
+19. Tutor voice input needs `RECORD_AUDIO` and the `RecognitionService` `<queries>` entry in the manifest (both there).
 
 ---
 
