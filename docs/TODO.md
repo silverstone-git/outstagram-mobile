@@ -88,9 +88,13 @@ review, attempts history (opens attempts made on the web too). Leftovers:
 
 Built: `lib/features/tutor/` (see `AGENTS.md` §2). Entry points: "Ask the AI tutor" in each expanded review card
 (results and past attempts) and the ✨ button on the Exams tab (library). Open items:
-- [ ] **On-device QA (prod):** ask → status → streamed answer with LaTeX + citations; reopen shows history; skill chips;
-      long-press an equation → saved, Undo; library chats/equations delete; voice input (mic permission prompt);
-      quota pill counts down; leaving mid-answer doesn't crash.
+- [x] **On-device QA (S22, prod, 2026-11-24):** review card → tutor; history reloads; live ask → "Checking the textbooks…"
+      → streamed answer (~10 s) with display/inline LaTeX + citations; quota pill 9→8/10; long-press equation → saved
+      (snackbar auto-hides); library chats (usage bar) and equations (render, delete) work.
+- [ ] Not yet tried on device: voice input (mic permission prompt), skill chips (prod has a single skill, so they're
+      hidden), deleting a chat, leaving mid-answer.
+- [ ] One answer rendered "x(A cos(ωt+φ₁)" where "x(t) = A cos…" was expected. A widget test renders that LaTeX
+      correctly, so it's most likely the model's text; check the stored message if it shows up again.
 - [ ] Limit errors (429/402) currently show inline text only. P5 turns them into the paywall sheet.
 - [ ] Local notification when the hourly quota resets (PLAN §5), pinch-zoom on long equations.
 

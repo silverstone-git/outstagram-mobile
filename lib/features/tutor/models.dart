@@ -19,6 +19,14 @@ class Citation {
   final int? n;
   final String? doc;
   final String? section;
+
+  /// "Book › Section". Headings come from the books' LaTeX sources, so trailing `\` row breaks are dropped
+  /// (inline `$…$` is left for MathText).
+  String get title {
+    String tidy(String? s) => (s ?? '').replaceAll(RegExp(r'(\s*\\+)+\s*$'), '').trim();
+    final d = tidy(doc), sec = tidy(section);
+    return sec.isEmpty ? d : '$d › $sec';
+  }
 }
 
 List<Citation> _citations(Object? v) =>

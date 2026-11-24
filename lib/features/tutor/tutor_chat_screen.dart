@@ -212,6 +212,9 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
         ..showSnackBar(
           SnackBar(
             content: const Text('Equation saved to favourites'),
+            // Flutter keeps action snackbars up until dismissed by default.
+            persist: false,
+            duration: const Duration(seconds: 4),
             action: SnackBarAction(
               label: 'Undo',
               onPressed: () => ref.read(tutorApiProvider).deleteFavorite(fav.id).then(
@@ -558,8 +561,8 @@ class _Bubble extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Expanded(
-                      child: Text(
-                        '[${c.n ?? j + 1}] ${c.doc ?? ''}${c.section != null ? ' › ${c.section}' : ''}',
+                      child: MathText(
+                        '[${c.n ?? j + 1}] ${c.title}',
                         style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                       ),
                     ),

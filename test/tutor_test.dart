@@ -171,6 +171,12 @@ void main() {
       expect(list.guess(null), 'physics');
     });
 
+    test('citation titles drop trailing LaTeX row breaks', () {
+      expect(const Citation(doc: 'CLASSICAL MECHANICS', section: r'7.3. Maximum $L$ \\').title,
+          r'CLASSICAL MECHANICS › 7.3. Maximum $L$');
+      expect(const Citation(doc: 'Book').title, 'Book');
+    });
+
     test('usage fill is the larger of the two limits', () {
       const u = ThreadUsage(threads: 2, bytes: 80000, maxThreads: 10, maxBytes: 100000, plan: 'free');
       expect(u.fill, closeTo(0.8, 1e-9));
