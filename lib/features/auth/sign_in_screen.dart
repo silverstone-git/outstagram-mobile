@@ -71,12 +71,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               child: Form(
                 key: _form,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  const Center(child: BrandMark(size: 44)),
+                  const Center(child: BrandSymbol(size: 88)),
+                  const SizedBox(height: 14),
+                  const Center(child: BrandMark(size: 40, showMark: false)),
                   const SizedBox(height: 10),
                   Text(
-                    'Study together. Grow together.',
+                    'STUDY SMARTER WITH AI',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 15),
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13, letterSpacing: 3),
                   ),
                   if (Env.isStaging) ...[
                     const SizedBox(height: 8),

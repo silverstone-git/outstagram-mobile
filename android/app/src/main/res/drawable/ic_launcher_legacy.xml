@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from assets/brand/mark.svg (Outstagram symbol). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="48dp" android:height="48dp"
+    android:viewportWidth="48" android:viewportHeight="48">
+    <path android:fillColor="#FF101020" android:pathData="M10.125,0 H37.875 A10.125,10.125 0 0 1 48,10.125 V37.875 A10.125,10.125 0 0 1 37.875,48 H10.125 A10.125,10.125 0 0 1 0,37.875 V10.125 A10.125,10.125 0 0 1 10.125,0 Z"/>
+    <group android:scaleX="0.15" android:scaleY="0.15" android:translateX="3.300" android:translateY="7.050">
+        <path android:pathData="M25 145 C25 105 45 78 72 49 C95 24 122 12 154 12 C202 12 238 45 247 88 C254 121 241 155 216 179 C193 201 169 214 137 214 C112 214 89 205 69 190 C58 181 54 168 61 156 C68 144 82 136 99 130 C119 122 133 110 143 92 C152 76 168 64 189 59 C173 55 160 55 145 59 C124 65 108 79 96 98 C84 118 80 140 62 158 C51 169 38 180 25 192 C22 178 23 160 25 145 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="22" android:startY="12" android:endX="254" android:endY="214">
+                    <item android:offset="0" android:color="#FFB7FF39"/>
+                    <item android:offset="0.48" android:color="#FF39F56B"/>
+                    <item android:offset="1" android:color="#FF00C98B"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+</vector>

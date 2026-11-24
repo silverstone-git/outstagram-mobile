@@ -151,7 +151,7 @@ Upload keystore + `key.properties`; Play App Signing; register upload and app-si
 **Google Play Billing** for Pro (server verifies purchase tokens, grants the same `pro_until`) replacing Razorpay;
 **account deletion** in-app + web page (`DELETE /me`, Play requirement); data safety form; privacy URL (`/privacy`
 exists on the web); OAuth consent screen published; internal testing track; clean test posts and accounts off prod;
-real app icon and splash (currently the Flutter default icon).
+app icon and splash done 2026-11-24 (vector, from the new logo kit); Play needs a 512×512 PNG icon and a 1024×500 feature graphic (export from `../assets/`; `icon-1024.png` there is transparent and off-centre, so re-export it centred on the navy tile).
 
 ## 9. Housekeeping
 

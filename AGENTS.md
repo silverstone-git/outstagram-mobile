@@ -85,7 +85,7 @@ lib/
       avatar.dart                letter avatar coloured by username (the API has no profile photos)
       feedback.dart              showError(context, e): snackbar, or the upgrade sheet for paywall errors
   features/
-    auth/                        sign-in, register, splash, BrandMark wordmark
+    auth/                        sign-in, register, splash, BrandMark (SVG mark + "Outsta"/"gram" text) and BrandSymbol
     shell/                       AppShell (NavigationBar), ComingSoon placeholder
     feed/                        models.dart (Post, Comment, Profile, …), social_api.dart, post_card.dart,
                                  post_list.dart (infinite + pull-to-refresh), comments_sheet.dart, home_screen.dart
@@ -118,6 +118,7 @@ test/math_text_test.dart         LaTeX clean-up/parsing
 test/billing_test.dart           status parsing, price format, paywall error → sheet, no keys / Pro states
 test/tutor_test.dart             SSE decoding, stream errors (429/402/404 bodies), normalizeMath, TutorMarkdown widget
 tool/exam_golden.ts              regenerates the golden fixtures with bun from ../outstagram-web (run after engine.ts changes)
+assets/brand/                    mark.svg (the logo symbol, from ../assets/01-icon-gradient.svg) + the logo kit README
 config/{staging,prod}.json       public build config (dart-define-from-file)
 android/                         Flutter-generated; flavors in app/build.gradle.kts
 .github/workflows/ci.yml         analyze, test, staging APK artifact
@@ -210,6 +211,10 @@ Host specifics (Windows, user `karti`):
 21. `showPaywall` allows one sheet at a time (a static guard reset when the sheet closes). Widget tests that open it
     must close it ("Maybe later") before the test ends, or the next test can't open one.
 22. Razorpay needs the R8 keep rules in `android/app/proguard-rules.pro`; without them release Checkout can break silently.
+23. Launcher icon, themed (monochrome) icon and splash are **vector drawables** generated from the mark's SVG path
+    (`res/drawable/ic_launcher_*.xml`, `splash_mark.xml`; adaptive icon in `mipmap-anydpi-v26`, dark-tile vector for API 24–25
+    in `mipmap-anydpi`). No PNG mipmaps. To change the logo, regenerate them from the new path (scale 0.23 keeps it inside
+    the adaptive safe zone). Brand navy `#101020` is in `res/values/colors.xml`.
 
 ---
 
