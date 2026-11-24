@@ -11,7 +11,7 @@ status, the repository map and the commands. Deep dives live in `docs/`:
 | `docs/TODO.md` | Roadmap and open work, including the email sign-in code + SMTP plan |
 | `PLAN.md` | The original product/architecture plan (phases P0–P7, mobile-only extras). Background, not status |
 
-Last updated: 2026-11-24 (P4 AI tutor built; needs on-device QA).
+Last updated: 2026-11-24 (P5 paywall built; needs on-device QA with Razorpay test mode).
 
 ---
 
@@ -50,7 +50,7 @@ advantages (see `PLAN.md` §5).
 | P2 Social | Feed/Explore, post card, likes, comments, search, profiles, follow requests, composer | ✅ done (needs on-device QA) |
 | P3 Exams | Dart port of the Pariksha engine, presets, practice, community exams, runner, results, history | ✅ done 2026-11-24 (verified on device; leftovers in `docs/TODO.md` §3) |
 | P4 AI tutor | SSE streaming, Markdown + LaTeX, skills, quota, library, saved equations, voice input | ✅ built 2026-11-24 (unit/widget tested; on-device QA pending, `docs/TODO.md` §4) |
-| P5 Paywall | 429/402/413 → upgrade sheet, Razorpay test | ⏳ |
+| P5 Paywall | 429/402/413 → upgrade sheet, Razorpay test | ✅ built 2026-11-24 (widget tested; prod has no Razorpay keys yet, on-device payment QA pending, `docs/TODO.md` §5) |
 | P6 Mobile extras | Push, share-target, result cards, App Links, offline packs | ⏳ |
 | P7 Release | Upload key, Play Billing, account deletion, Play listing | ⏳ |
 
@@ -70,7 +70,7 @@ lib/
     router.dart                  go_router: auth redirect, 5-tab StatefulShellRoute, /search, /u/:username
     theme.dart                   brand tokens (from outstagram-web index.css), dark default, ThemeMode persisted
   core/
-    config/env.dart              compile-time config (FLAVOR, API_BASE, GOOGLE_SERVER_CLIENT_ID, AUTH_SCHEME, WEB_BASE)
+    config/env.dart              compile-time config (FLAVOR, API_BASE, GOOGLE_SERVER_CLIENT_ID, AUTH_SCHEME, WEB_BASE, STORE)
     auth/
       session.dart               AppUser, Session (access, refresh, expiresAt)
       session_store.dart         flutter_secure_storage persistence (key outsie_session_v1)
@@ -83,7 +83,7 @@ lib/
     ui/
       math_text.dart             MathText: inline/display LaTeX (flutter_math_fork), web-compatible clean-up
       avatar.dart                letter avatar coloured by username (the API has no profile photos)
-      feedback.dart              showError(context, e)
+      feedback.dart              showError(context, e): snackbar, or the upgrade sheet for paywall errors
   features/
     auth/                        sign-in, register, splash, BrandMark wordmark
     shell/                       AppShell (NavigationBar), ComingSoon placeholder
@@ -101,6 +101,10 @@ lib/
       exam_runner_screen.dart    /exam/run full-screen: PageView, palette, timer + auto-submit, wakelock, PopScope
       exam_result_screen.dart    /exam/result (fresh, saves attempt) and /exam/attempt/:id; score, topics, SWOT, review,
                                  "Ask the AI tutor" per question (needs the saved attempt id)
+    billing/
+      billing_api.dart           BillingStatus/Limits/Price, /billing/status|razorpay/order|razorpay/verify, billingStatusProvider
+      razorpay_checkout.dart     openRazorpay(order): native Checkout → RazorpayResult | null (cancelled) | ApiException
+      paywall_sheet.dart         showPaywall / showPaywallFor: Free vs Pro table, pay button, "delete old chats" for history limits
     tutor/
       models.dart                ChatMessage, Citation, Quota, Skill(List), ChatThread, ThreadUsage, FavoriteEquation, TutorEvent
       sse.dart                   decodeSse: byte stream → SSE events (chunk-boundary/CRLF/UTF-8 safe)
@@ -111,6 +115,7 @@ lib/
 test/auth_test.dart              interceptor/refresh/sign-in/ApiException tests with a fake Dio adapter
 test/exam_engine_test.dart       golden tests: must match outstagram-web's engine.ts exactly (fixtures/exam_golden.json)
 test/math_text_test.dart         LaTeX clean-up/parsing
+test/billing_test.dart           status parsing, price format, paywall error → sheet, no keys / Pro states
 test/tutor_test.dart             SSE decoding, stream errors (429/402/404 bodies), normalizeMath, TutorMarkdown widget
 tool/exam_golden.ts              regenerates the golden fixtures with bun from ../outstagram-web (run after engine.ts changes)
 config/{staging,prod}.json       public build config (dart-define-from-file)
@@ -202,6 +207,9 @@ Host specifics (Windows, user `karti`):
     a `Text.rich(WidgetSpan…)` so they merge into the paragraph's RichText (`_MathBuilder`).
 19. Tutor voice input needs `RECORD_AUDIO` and the `RecognitionService` `<queries>` entry in the manifest (both there).
 20. CI pins Flutter **3.44.8** (same as local). Don't unpin until the `material_ui` migration is done (`docs/TODO.md` §9).
+21. `showPaywall` allows one sheet at a time (a static guard reset when the sheet closes). Widget tests that open it
+    must close it ("Maybe later") before the test ends, or the next test can't open one.
+22. Razorpay needs the R8 keep rules in `android/app/proguard-rules.pro`; without them release Checkout can break silently.
 
 ---
 

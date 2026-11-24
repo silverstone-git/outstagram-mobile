@@ -110,12 +110,19 @@ skill chips (`/ai/skills`), quota pill (`/ai/quota`), tutor library (`/ai/chats`
 (long-press → haptic → `POST /favorites/equations`), voice input (`speech_to_text`). Reference: `QuestionChat.tsx`,
 `TutorMarkdown.tsx`, `TutorLibrary.tsx`.
 
-## 5. P5: Paywall
+## 5. P5: Paywall ✅ built (2026-11-24)
 
-One interceptor or helper: `ApiException.isPaywall` → bottom sheet with plan info from `/billing/status`
-(Free vs Pro limits, price). Razorpay **test mode** (`razorpay_flutter`) only in sideloaded builds;
-`POST /billing/razorpay/order` → checkout → `POST /billing/razorpay/verify`. Hide the purchase button in Play builds
-until Play Billing exists.
+`lib/features/billing/`: `showError` opens the upgrade sheet for any paywall error (429/402/413 with
+`detail.upgrade`); the tutor opens it on a quota/history limit (and on send when the cached quota is already out);
+"Outstagram Pro" in the profile ⋮ menu opens it manually (shows the pass for Pro users). Free vs Pro table and price
+from `/billing/status`; Razorpay native Checkout → `/billing/razorpay/verify` → plan + quota refreshed. The composer's
+per-photo limit follows the plan (`limits.media_bytes`). The button is hidden when `STORE=play` or the server has no keys.
+- [ ] **Prod has no Razorpay keys**, so prod shows "Payments aren't set up on this server yet". To let friends test,
+      attach the existing test-key secrets (`razorpay-test-key-id`, `…-key-secret`, `…-webhook-secret`) to `outsie`
+      (this also turns the button on for the **web** on prod; test mode, no real money) and add a prod webhook.
+- [ ] On-device QA: staging flavor (has test keys): hit the tutor quota or open Pro from the menu → pay with UPI
+      `success@razorpay` → Pro active; `failure@razorpay` → error shown, still free; back out → nothing happens.
+- [ ] Clean test `payment`/`userplan` rows off prod before the public release.
 
 ## 6. Social gaps (server + app)
 

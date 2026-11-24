@@ -46,6 +46,7 @@ android {
         release {
             // TODO(P7): upload keystore via key.properties. Debug keys for now so release builds run.
             signingConfig = signingConfigs.getByName("debug")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 }

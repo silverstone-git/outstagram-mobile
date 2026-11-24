@@ -9,6 +9,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/net/api_error.dart';
+import '../billing/paywall_sheet.dart';
 import '../../core/ui/math_text.dart';
 import '../exams/exam_api.dart';
 import 'models.dart';
@@ -127,7 +128,11 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
     final quota = ref.read(tutorQuotaProvider);
     if (quota != null && quota.isOut) {
       setState(() => _error = "You've used all ${quota.limit} AI prompts for this hour.${quota.resetHint}");
-      HapticFeedback.heavyImpact();
+      if (!quota.isPro) {
+        showPaywall(context, code: 'ai_quota', message: "You've used all your AI prompts for this hour.");
+      } else {
+        HapticFeedback.heavyImpact();
+      }
       return;
     }
     FocusScope.of(context).unfocus();
@@ -182,6 +187,7 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
         _draft.text = msg;
         _error = err.code == 'ai_quota' ? '${err.message}${q?.resetHint ?? ''}' : err.message;
       });
+      showPaywallFor(context, err);
     } finally {
       _paint?.cancel();
       if (mounted) {

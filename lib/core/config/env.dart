@@ -15,5 +15,12 @@ abstract final class Env {
   /// URL scheme of the browser sign-in callback; equals the Android applicationId of the flavor.
   static const authScheme = String.fromEnvironment('AUTH_SCHEME', defaultValue: 'com.cyto.outstagram.staging');
 
+  /// Where this APK is distributed: `sideload` (default: test APKs for friends) or `play`.
+  /// Build a Play bundle with `--dart-define=STORE=play`.
+  static const store = String.fromEnvironment('STORE', defaultValue: 'sideload');
+
   static bool get isStaging => flavor == 'staging';
+
+  /// Razorpay Checkout is only allowed outside the Play Store (Play requires Play Billing for digital goods).
+  static bool get razorpayAllowed => store != 'play';
 }

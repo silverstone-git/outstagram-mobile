@@ -83,7 +83,19 @@ Quirks:
 
 Question text is LaTeX with **doubled backslashes** (`$\theta$` in the JSON); `MathText` collapses them like the web.
 
-## Tutor, billing (to build in P4–P5)
+## Billing (implemented in the app, `lib/features/billing/`)
+
+- `GET /billing/status` → `{plan: free|pro, valid_until (ISO Z or null), limits, free_limits, pro_limits, usage,
+  payments_enabled, test_mode, price: {amount (paise), currency, days}}`. `payments_enabled` is false when the
+  server has no Razorpay keys (prod as of 2026-11-24; staging has **test** keys).
+- `POST /billing/razorpay/order {reason}` → `{key_id, order_id, amount, currency, name, description, prefill, test_mode}`;
+  503 when payments aren't configured. The amount is fixed server-side.
+- `POST /billing/razorpay/verify {razorpay_order_id, razorpay_payment_id, razorpay_signature}` → `{plan, valid_until, limits}`.
+  Idempotent; the `payment.captured` webhook grants Pro too if the app dies mid-payment.
+- Paywall responses: 429 `ai_quota`, 402 `tutor_threads`/`tutor_storage`, 413 `media_too_large`, all with
+  `detail = {code, message, upgrade: true, …}`. `showError` opens the sheet for these automatically.
+
+## Tutor (P4)
 
 Same endpoints the web uses; see `outstagram-server/README.md` "Exam attempts and AI tutor API", "Stats",
 "Billing", and the web implementation in `outstagram-web/src/features/exams/` (`engine.ts` is the scoring source

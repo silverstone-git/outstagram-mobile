@@ -57,6 +57,10 @@ On every push: `flutter pub get` → `analyze` → `test` → `build apk --relea
   sign-in breaks.
 - Share: `flutter build apk --release --flavor prod --dart-define-from-file=config/prod.json`, send
   `build/app/outputs/flutter-apk/app-prod-release.apk` (~55 MB). Friends must allow "install unknown apps".
+- `STORE` dart-define: `sideload` (default) shows the Razorpay button; a Play build must pass
+  `--dart-define=STORE=play`, which hides it (Play requires Play Billing for digital goods). Remove the
+  `razorpay_flutter` dependency from the Play build once Play Billing exists (P7).
+- Release builds use R8 with `android/app/proguard-rules.pro` (Razorpay's keep rules: Checkout's WebView JS bridge).
 - Before Play (P7): create an upload keystore (`keytool -genkey -v -keystore upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`),
   `android/key.properties` (git-ignored), a `release` signingConfig, enrol in Play App Signing, then register both new
   SHA-1s as Android OAuth clients (`docs/auth.md` §5).

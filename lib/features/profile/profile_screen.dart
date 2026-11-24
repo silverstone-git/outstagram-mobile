@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../../core/auth/auth_controller.dart';
+import '../billing/paywall_sheet.dart';
 import 'profile_view.dart';
 
 /// Your own profile (tab).
@@ -25,9 +26,19 @@ class ProfileScreen extends ConsumerWidget {
           ),
           PopupMenuButton<String>(
             onSelected: (v) async {
+              if (v == 'pro') await showPaywall(context);
               if (v == 'signout') await ref.read(authControllerProvider.notifier).signOut();
             },
-            itemBuilder: (_) => const [PopupMenuItem(value: 'signout', child: Text('Sign out'))],
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'pro',
+                child: ListTile(leading: Icon(Icons.workspace_premium_outlined), title: Text('Outstagram Pro')),
+              ),
+              PopupMenuItem(
+                value: 'signout',
+                child: ListTile(leading: Icon(Icons.logout_rounded), title: Text('Sign out')),
+              ),
+            ],
           ),
         ],
       ),
