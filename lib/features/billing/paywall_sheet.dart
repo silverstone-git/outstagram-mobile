@@ -110,6 +110,7 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
     final cs = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final status = ref.watch(billingStatusProvider);
+    final isPro = status.value?.isPro ?? false;
     return PopScope(
       canPop: !_paying,
       child: SingleChildScrollView(
@@ -129,7 +130,7 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
             Text(_headline[widget.code] ?? _headline['manual']!, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
             Text(
-              widget.message ?? 'Upgrade to Pro for higher limits.',
+              widget.message ?? (isPro ? 'Your Pro pass is active.' : 'Upgrade to Pro for higher limits.'),
               style: text.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
@@ -163,7 +164,7 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
             const SizedBox(height: 4),
             TextButton(
               onPressed: _paying ? null : () => Navigator.pop(context, false),
-              child: const Text('Maybe later'),
+              child: Text(isPro ? 'Close' : 'Maybe later'),
             ),
           ],
         ),
@@ -255,8 +256,8 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
           if (s.testMode) ...[
             const SizedBox(height: 8),
             Text(
-              'Test mode: no real money moves. Pay by UPI with the ID success@razorpay '
-              '(or failure@razorpay to see a failed payment).',
+              'Test mode: no real money moves. Pick Netbanking, any bank, then Success (or Failure) '
+              'on the demo bank page. Test card: 4111 1111 1111 1111, any future date and CVV.',
               style: small,
             ),
           ],

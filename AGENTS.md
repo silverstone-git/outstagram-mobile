@@ -50,7 +50,7 @@ advantages (see `PLAN.md` §5).
 | P2 Social | Feed/Explore, post card, likes, comments, search, profiles, follow requests, composer | ✅ done (needs on-device QA) |
 | P3 Exams | Dart port of the Pariksha engine, presets, practice, community exams, runner, results, history | ✅ done 2026-11-24 (verified on device; leftovers in `docs/TODO.md` §3) |
 | P4 AI tutor | SSE streaming, Markdown + LaTeX, skills, quota, library, saved equations, voice input | ✅ built 2026-11-24 (unit/widget tested; on-device QA pending, `docs/TODO.md` §4) |
-| P5 Paywall | 429/402/413 → upgrade sheet, Razorpay test | ✅ built 2026-11-24 (widget tested; prod has no Razorpay keys yet, on-device payment QA pending, `docs/TODO.md` §5) |
+| P5 Paywall | 429/402/413 → upgrade sheet, Razorpay test | ✅ built 2026-11-24 (widget tested; prod on Razorpay test keys; payment verified on device 2026-11-24, `docs/TODO.md` §5) |
 | P6 Mobile extras | Push, share-target, result cards, App Links, offline packs | ⏳ |
 | P7 Release | Upload key, Play Billing, account deletion, Play listing | ⏳ |
 

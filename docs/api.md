@@ -87,7 +87,7 @@ Question text is LaTeX with **doubled backslashes** (`$\theta$` in the JSON); `M
 
 - `GET /billing/status` → `{plan: free|pro, valid_until (ISO Z or null), limits, free_limits, pro_limits, usage,
   payments_enabled, test_mode, price: {amount (paise), currency, days}}`. `payments_enabled` is false when the
-  server has no Razorpay keys (prod as of 2026-11-24; staging has **test** keys).
+  server has no Razorpay keys (both prod and staging have **test** keys since 2026-11-24).
 - `POST /billing/razorpay/order {reason}` → `{key_id, order_id, amount, currency, name, description, prefill, test_mode}`;
   503 when payments aren't configured. The amount is fixed server-side.
 - `POST /billing/razorpay/verify {razorpay_order_id, razorpay_payment_id, razorpay_signature}` → `{plan, valid_until, limits}`.

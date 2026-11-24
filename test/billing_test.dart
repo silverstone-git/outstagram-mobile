@@ -94,7 +94,7 @@ void main() {
     expect(find.text("You've used this hour's AI prompts"), findsOneWidget);
     expect(find.text('Pay ₹99 with Razorpay'), findsOneWidget);
     expect(find.text('60'), findsOneWidget); // Pro prompts/hour
-    expect(find.textContaining('success@razorpay'), findsOneWidget);
+    expect(find.textContaining('demo bank page'), findsOneWidget);
     expect(find.byType(SnackBar), findsNothing);
 
     await t.ensureVisible(find.text('Maybe later'));
@@ -130,6 +130,9 @@ void main() {
     await t.tap(find.text('go'));
     await t.pumpAndSettle();
     expect(find.textContaining("You're on Pro until"), findsOneWidget);
+    expect(find.text('Close'), findsOneWidget);
+    await t.tap(find.text('Close'));
+    await t.pumpAndSettle();
     expect(find.textContaining('Pay '), findsNothing);
   });
 }

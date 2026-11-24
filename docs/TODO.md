@@ -117,12 +117,18 @@ skill chips (`/ai/skills`), quota pill (`/ai/quota`), tutor library (`/ai/chats`
 "Outstagram Pro" in the profile ⋮ menu opens it manually (shows the pass for Pro users). Free vs Pro table and price
 from `/billing/status`; Razorpay native Checkout → `/billing/razorpay/verify` → plan + quota refreshed. The composer's
 per-photo limit follows the plan (`limits.media_bytes`). The button is hidden when `STORE=play` or the server has no keys.
-- [ ] **Prod has no Razorpay keys**, so prod shows "Payments aren't set up on this server yet". To let friends test,
-      attach the existing test-key secrets (`razorpay-test-key-id`, `…-key-secret`, `…-webhook-secret`) to `outsie`
-      (this also turns the button on for the **web** on prod; test mode, no real money) and add a prod webhook.
-- [ ] On-device QA: staging flavor (has test keys): hit the tutor quota or open Pro from the menu → pay with UPI
-      `success@razorpay` → Pro active; `failure@razorpay` → error shown, still free; back out → nothing happens.
-- [ ] Clean test `payment`/`userplan` rows off prod before the public release.
+- [x] **Prod has Razorpay test keys** (2026-11-24): the `razorpay-test-*` secrets are attached to `outsie` too, so the
+      pay button is live on prod app **and web** in test mode (no real money). Swap to live keys before charging anyone.
+- [ ] **Razorpay dashboard webhook for prod** (Test mode → Webhooks): URL `https://outsie-mgenvq5gwa-an.a.run.app/billing/razorpay/webhook`
+      (direct Cloud Run URL: Cloudflare in front of outsie.aryan.cfd blocked a non-browser user agent with 403),
+      secret = `RAZORPAY_WEBHOOK_SECRET` in `env.razorpay.txt`, events `payment.captured`, `order.paid`, `payment.failed`.
+      Only a safety net: the app's verify call already grants Pro. Signed requests verified with a self-test on 2026-11-24.
+- [x] On-device QA (S22, prod, 2026-11-24): menu → sheet (live limits/price) → Checkout (email prefilled, brand colour);
+      back out → sheet unchanged; Netbanking demo bank Failure → Checkout's own retry screen; Success → "Welcome to Pro",
+      sheet shows "Pro until Dec 24, 2026". This account's test Checkout offers no UPI, so `success@razorpay` doesn't apply.
+- [ ] Not yet tried on device: paywall from a real tutor 429 (needs 10 prompts in an hour on a free account), Pro photo size.
+- [ ] `outstagram-web` Paywall still says "Pay by UPI with success@razorpay"; same fix as the app's hint.
+- [ ] Clean test `payment`/`userplan` rows off prod before the public release (qa_tester1 is Pro until 2026-12-24).
 
 ## 6. Social gaps (server + app)
 
