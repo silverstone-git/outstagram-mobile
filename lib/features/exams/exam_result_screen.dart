@@ -5,13 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../core/net/api_error.dart';
 import '../../core/ui/math_text.dart';
 import 'engine/engine.dart';
+import '../tutor/tutor_chat_screen.dart';
 import 'exam_api.dart';
 import 'exam_session.dart';
 import 'exams_home_screen.dart';
-
-final _attemptProvider = FutureProvider.autoDispose.family<Attempt, String>(
-  (ref, id) => ref.watch(examApiProvider).attempt(id),
-);
 
 /// A past attempt, loaded from the server (`/exam/attempt/:id`).
 class AttemptScreen extends ConsumerWidget {
@@ -21,7 +18,7 @@ class AttemptScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final a = ref.watch(_attemptProvider(attemptId));
+    final a = ref.watch(attemptProvider(attemptId));
     return a.when(
       loading: () => Scaffold(
         appBar: AppBar(),
@@ -33,7 +30,7 @@ class AttemptScreen extends ConsumerWidget {
           child: Padding(padding: const EdgeInsets.all(32), child: Text(ApiException.from(e).message)),
         ),
       ),
-      data: (a) => ResultView(result: a.result, maxScore: a.summary.maxScore),
+      data: (a) => ResultView(result: a.result, maxScore: a.summary.maxScore, attemptId: a.summary.id),
     );
   }
 }
@@ -50,6 +47,7 @@ class FreshResultScreen extends ConsumerStatefulWidget {
 
 class _FreshResultScreenState extends ConsumerState<FreshResultScreen> {
   _Save _save = _Save.saving;
+  String? _attemptId;
 
   @override
   void initState() {
@@ -61,8 +59,13 @@ class _FreshResultScreenState extends ConsumerState<FreshResultScreen> {
     setState(() => _save = _Save.saving);
     final f = widget.finished;
     try {
-      await ref.read(examApiProvider).saveAttempt(f.examId, f.result, f.maxScore);
-      if (mounted) setState(() => _save = _Save.saved);
+      final saved = await ref.read(examApiProvider).saveAttempt(f.examId, f.result, f.maxScore);
+      if (mounted) {
+        setState(() {
+          _save = _Save.saved;
+          _attemptId = saved.id;
+        });
+      }
       ref.invalidate(attemptsProvider);
     } catch (e) {
       debugPrint('save attempt failed: $e');
@@ -77,6 +80,7 @@ class _FreshResultScreenState extends ConsumerState<FreshResultScreen> {
     return ResultView(
       result: f.result,
       maxScore: f.maxScore,
+      attemptId: _attemptId,
       leftApp: f.leftApp,
       banner: switch (_save) {
         _Save.saving => const _Banner(icon: Icons.cloud_upload_outlined, text: 'Saving to your attempts…'),
@@ -105,6 +109,7 @@ class ResultView extends StatefulWidget {
     super.key,
     required this.result,
     required this.maxScore,
+    this.attemptId,
     this.leftApp = 0,
     this.banner,
     this.onRetake,
@@ -112,6 +117,9 @@ class ResultView extends StatefulWidget {
 
   final ExamResult result;
   final double maxScore;
+
+  /// The saved attempt; the AI tutor needs it (null while saving or if saving failed).
+  final String? attemptId;
   final int leftApp;
   final Widget? banner;
   final VoidCallback? onRetake;
@@ -340,6 +348,12 @@ class _ResultViewState extends State<ResultView> {
               question: q,
               answer: a,
               open: _open.contains(q.id),
+              onAskTutor: widget.attemptId == null
+                  ? null
+                  : () => context.push(
+                      tutorPath(widget.attemptId!, q.id),
+                      extra: TutorQuestion(text: q.question, topic: q.topic, examTitle: r.examName),
+                    ),
               onToggle: () => setState(() => _open.contains(q.id) ? _open.remove(q.id) : _open.add(q.id)),
             ),
         ],
@@ -355,6 +369,7 @@ class _ReviewCard extends StatelessWidget {
     required this.answer,
     required this.open,
     required this.onToggle,
+    this.onAskTutor,
   });
 
   final int number;
@@ -362,6 +377,7 @@ class _ReviewCard extends StatelessWidget {
   final UserAnswer? answer;
   final bool open;
   final VoidCallback onToggle;
+  final VoidCallback? onAskTutor;
 
   @override
   Widget build(BuildContext context) {
@@ -513,6 +529,15 @@ class _ReviewCard extends StatelessWidget {
                           const SizedBox(height: 4),
                           MathText(q.explanation, style: const TextStyle(fontSize: 14, height: 1.4)),
                         ],
+                      ),
+                    ),
+                  if (onAskTutor != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: OutlinedButton.icon(
+                        onPressed: onAskTutor,
+                        icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                        label: const Text('Ask the AI tutor'),
                       ),
                     ),
                 ],

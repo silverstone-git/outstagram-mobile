@@ -84,7 +84,21 @@ review, attempts history (opens attempts made on the web too). Leftovers:
 - [ ] Topic chart is plain bars (no `fl_chart`); fine for now.
 - [ ] Web label says GATE "65 Qs" but the pattern sums to 61 (`outstagram-web` `PRESETS`); the app says 61.
 
-## 4. P4: AI tutor  ← next
+## 4. P4: AI tutor ✅ built (2026-11-24)
+
+Built: `lib/features/tutor/` (see `AGENTS.md` §2). Entry points: "Ask the AI tutor" in each expanded review card
+(results and past attempts) and the ✨ button on the Exams tab (library). Open items:
+- [x] **On-device QA (S22, prod, 2026-11-24):** review card → tutor; history reloads; live ask → "Checking the textbooks…"
+      → streamed answer (~10 s) with display/inline LaTeX + citations; quota pill 9→8/10; long-press equation → saved
+      (snackbar auto-hides); library chats (usage bar) and equations (render, delete) work.
+- [ ] Not yet tried on device: voice input (mic permission prompt), skill chips (prod has a single skill, so they're
+      hidden), deleting a chat, leaving mid-answer.
+- [ ] One answer rendered "x(A cos(ωt+φ₁)" where "x(t) = A cos…" was expected. A widget test renders that LaTeX
+      correctly, so it's most likely the model's text; check the stored message if it shows up again.
+- [ ] Limit errors (429/402) currently show inline text only. P5 turns them into the paywall sheet.
+- [ ] Local notification when the hourly quota resets (PLAN §5), pinch-zoom on long equations.
+
+Original notes:
 
 Server side verified 2026-11-24: `/chat/stream` answers in ~15 s with citations and knows the user's answer.
 Entry point in the app: a "Ask the AI tutor" button on each review card (`exam_result_screen.dart` `_ReviewCard`);
