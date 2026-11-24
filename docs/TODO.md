@@ -142,6 +142,10 @@ real app icon and splash (currently the Flutter default icon).
 
 ## 9. Housekeeping
 
+- **Flutter 3.47 migration:** 3.47 deprecates `package:flutter/material.dart` in favour of `package:material_ui/material_ui.dart`,
+  which fails `flutter analyze` on every file. CI is pinned to 3.44.8 (`.github/workflows/ci.yml`) to match the local SDK.
+  Upgrade locally, switch the imports, then bump the pin.
+
 - Delete unused platform folders (`ios/ linux/ macos/ windows/ web/`) or keep them deliberately.
 - Remove `build_runner` from dev deps if codegen is never adopted.
 - Add a prod-APK artifact (or GitHub Release) job to CI, signed consistently, so friends can download builds.

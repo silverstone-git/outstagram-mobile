@@ -201,6 +201,7 @@ Host specifics (Windows, user `karti`):
 18. flutter_markdown_plus wraps non-text inline widgets into a `Wrap`, which breaks paragraphs. Inline builders must return
     a `Text.rich(WidgetSpan…)` so they merge into the paragraph's RichText (`_MathBuilder`).
 19. Tutor voice input needs `RECORD_AUDIO` and the `RecognitionService` `<queries>` entry in the manifest (both there).
+20. CI pins Flutter **3.44.8** (same as local). Don't unpin until the `material_ui` migration is done (`docs/TODO.md` §9).
 
 ---
 
