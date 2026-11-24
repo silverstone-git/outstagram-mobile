@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/net/api_error.dart';
 import '../../core/ui/feedback.dart';
 import '../billing/billing_api.dart';
+import 'compose_draft.dart';
 import '../feed/models.dart';
 import '../feed/social_api.dart';
 
@@ -51,6 +52,40 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     ref.read(socialApiProvider).trending().then((t) {
       if (mounted) setState(() => _trending = t.take(8).toList());
     });
+    // A draft set before this tab was first built (e.g. shared from another app at launch).
+    Future.microtask(() {
+      final d = ref.read(composeDraftProvider.notifier).take();
+      if (d != null) _applyDraft(d);
+    });
+  }
+
+  /// Fills the composer from a [ComposeDraft]; replaces what's there unless the draft has no images.
+  Future<void> _applyDraft(ComposeDraft d) async {
+    if (!mounted || d.isEmpty) return;
+    setState(() {
+      if (d.images.isNotEmpty) _images.clear();
+      if (d.caption != null && d.caption!.trim().isNotEmpty) {
+        _caption.text = d.caption!.trim();
+        _caption.selection = TextSelection.collapsed(offset: _caption.text.length);
+      }
+      if (d.category != null) _category = d.category!;
+    });
+    if (d.images.isEmpty) return;
+    setState(() => _compressing = true);
+    final max = await _maxBytes();
+    var skipped = 0;
+    for (final raw in d.images.take(_maxImages)) {
+      final bytes = await _compressBytes(raw, max);
+      if (bytes == null) {
+        skipped++;
+      } else if (mounted) {
+        setState(() => _images.add(_Picked(bytes)));
+      }
+    }
+    if (mounted) {
+      setState(() => _compressing = false);
+      if (skipped > 0) showError(context, ApiException('$skipped photo(s) were too large even after compression'));
+    }
   }
 
   @override
@@ -69,8 +104,9 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   }
 
   /// Downscale + WebP, stepping quality down until it fits the plan's limit.
-  Future<Uint8List?> _compress(XFile f, int max) async {
-    final raw = await f.readAsBytes();
+  Future<Uint8List?> _compress(XFile f, int max) async => _compressBytes(await f.readAsBytes(), max);
+
+  Future<Uint8List?> _compressBytes(Uint8List raw, int max) async {
     for (final (side, q) in [(1600, 82), (1440, 72), (1280, 62), (1080, 52), (900, 45)]) {
       final out = await FlutterImageCompress.compressWithList(
         raw,
@@ -153,6 +189,9 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(composeDraftProvider, (_, d) {
+      if (d != null) _applyDraft(ref.read(composeDraftProvider.notifier).take()!);
+    });
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(

@@ -16,6 +16,12 @@ abstract final class Brand {
   static const emerald = Color(0xFF047857);
   static const amber = Color(0xFFB45309);
   static const mist = Color(0xFFE8EAF4);
+  // logo kit (../assets/README.txt): for images that must look the same in both themes (result cards)
+  static const logoNavy = Color(0xFF101020);
+  static const logoGreen = Color(0xFF39F56B);
+  static const logoLime = Color(0xFFB7FF39);
+  static const logoTeal = Color(0xFF00C98B);
+  static const lavender = Color(0xFFA8A9C7);
 }
 
 ThemeData _base(ColorScheme cs) {

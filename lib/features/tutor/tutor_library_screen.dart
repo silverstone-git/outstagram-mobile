@@ -26,6 +26,10 @@ class TutorLibraryScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
+          // Opened from the launcher shortcut there's nothing to pop back to: go to the Exams tab.
+          leading: context.canPop()
+              ? null
+              : IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/exams')),
           title: const Text('Tutor library'),
           bottom: const TabBar(
             tabs: [

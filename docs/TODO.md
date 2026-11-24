@@ -140,10 +140,21 @@ per-photo limit follows the plan (`limits.media_bytes`). The button is hidden wh
 
 ## 7. P6: Mobile extras (`PLAN.md` §5)
 
-Push notifications (FCM + `POST /me/devices`, sends on follow request/approval/like/comment), share-target
-("Share to Outstagram", `receive_sharing_intent`), result cards as images to WhatsApp/Instagram Stories, App Links
-(`/.well-known/assetlinks.json` on the web host) for post/profile URLs, launcher shortcuts, offline exam packs,
-local notifications (exam time left, quota reset), home-screen widget.
+Done 2026-11-24 (verified on the S22, prod):
+- [x] **Result cards:** share icon on any result → 4:5 branded card → "Share image" (Android share sheet, caption + link)
+      or "Post to your feed" (composer prefilled: image, caption, Exam Result). Only topics above 0% are listed.
+- [x] **Share to Outstagram:** photos/text from other apps open the composer (`share_intent.dart`); waits for sign-in.
+- [x] **Launcher shortcuts:** New post, Practice exam, AI tutor (long-press the icon). Cold start goes to the route.
+
+Next, needs the user:
+- [ ] **Push notifications (FCM):** needs a Firebase project linked to GCP `top-athlete-472606-v4` and the two Android
+      apps registered (`com.cyto.outstagram`, `.staging`) → `google-services.json` per flavor. Then server: `POST /me/devices`,
+      a `devicetoken` table (re-run supabase-lockdown.sql), sends on follow request/approval/like/comment via FCM HTTP v1
+      (service account on Cloud Run); app: `firebase_messaging`, notification permission (Android 13+), tap → deep link.
+- [ ] **App Links** for post/profile URLs: `https://aryan.cfd/.well-known/assetlinks.json` at the **domain root** (portfolio
+      server, not this repo) with the signing SHA-256; post detail route `/p/:id` first (`docs/TODO.md` §6).
+- [ ] Local notifications: "5 minutes left" when leaving a running exam; "your tutor is back" when the quota resets.
+- [ ] Offline exam packs, home-screen widget, video posts in share-target.
 
 ## 8. P7: Release to Play
 

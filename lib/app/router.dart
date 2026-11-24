@@ -27,15 +27,35 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(authControllerProvider, (_, next) => auth.value = next, fireImmediately: true);
   ref.onDispose(auth.dispose);
 
+  // Where a launch was heading (a launcher shortcut / deep link such as /tutor) while the session was
+  // still loading or nobody was signed in; we go there once signed in instead of the feed.
+  String? pending;
+  void remember(GoRouterState s) {
+    final loc = s.matchedLocation;
+    if (loc != '/splash' && loc != '/feed' && !_authRoutes.contains(loc)) pending = s.uri.toString();
+  }
+
   return GoRouter(
     initialLocation: '/feed',
     refreshListenable: auth,
     redirect: (context, state) {
       final loc = state.matchedLocation;
-      if (auth.value.isLoading && !auth.value.hasValue) return loc == '/splash' ? null : '/splash';
+      if (auth.value.isLoading && !auth.value.hasValue) {
+        if (loc == '/splash') return null;
+        remember(state);
+        return '/splash';
+      }
       final signedIn = auth.value.value != null;
-      if (!signedIn) return _authRoutes.contains(loc) ? null : '/sign-in';
-      if (_authRoutes.contains(loc) || loc == '/splash') return '/feed';
+      if (!signedIn) {
+        if (_authRoutes.contains(loc)) return null;
+        remember(state);
+        return '/sign-in';
+      }
+      if (_authRoutes.contains(loc) || loc == '/splash') {
+        final to = pending ?? '/feed';
+        pending = null;
+        return to;
+      }
       return null;
     },
     routes: [

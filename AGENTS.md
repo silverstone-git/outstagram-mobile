@@ -11,7 +11,7 @@ status, the repository map and the commands. Deep dives live in `docs/`:
 | `docs/TODO.md` | Roadmap and open work, including the email sign-in code + SMTP plan |
 | `PLAN.md` | The original product/architecture plan (phases P0–P7, mobile-only extras). Background, not status |
 
-Last updated: 2026-11-24 (P5 paywall built; needs on-device QA with Razorpay test mode).
+Last updated: 2026-11-24 (new logo; P6 part 1: result cards, share-to-app, launcher shortcuts).
 
 ---
 
@@ -51,7 +51,7 @@ advantages (see `PLAN.md` §5).
 | P3 Exams | Dart port of the Pariksha engine, presets, practice, community exams, runner, results, history | ✅ done 2026-11-24 (verified on device; leftovers in `docs/TODO.md` §3) |
 | P4 AI tutor | SSE streaming, Markdown + LaTeX, skills, quota, library, saved equations, voice input | ✅ built 2026-11-24 (unit/widget tested; on-device QA pending, `docs/TODO.md` §4) |
 | P5 Paywall | 429/402/413 → upgrade sheet, Razorpay test | ✅ built 2026-11-24 (widget tested; prod on Razorpay test keys; payment verified on device 2026-11-24, `docs/TODO.md` §5) |
-| P6 Mobile extras | Push, share-target, result cards, App Links, offline packs | ⏳ |
+| P6 Mobile extras | Push, share-target, result cards, App Links, offline packs | 🟡 result cards, share-target, launcher shortcuts done 2026-11-24 (verified on device); push + App Links need setup (`docs/TODO.md` §7) |
 | P7 Release | Upload key, Play Billing, account deletion, Play listing | ⏳ |
 
 **Testing setup decided by the user (2026-11-24):** the *prod* flavor talks to the **production** outsie +
@@ -92,7 +92,9 @@ lib/
     social/search_screen.dart    debounced /users/search
     profile/                     profile_view.dart (header + posts, follow button, stats), profile_screen.dart
     activity/activity_screen.dart follow requests + approve
-    compose/compose_screen.dart  pick/camera → WebP ≤200 kB → /media-upload/bulk → /posts; postsVersionProvider
+    compose/compose_screen.dart  pick/camera → WebP (plan's media limit) → /media-upload/bulk → /posts; postsVersionProvider
+    compose/compose_draft.dart   composeDraftProvider: images/caption/category the composer takes when it opens
+    compose/share_intent.dart    ShareIntentListener ("Share to Outstagram", receive_sharing_intent) → draft → /create
     exams/
       engine/                    pure Dart port of outstagram-web engine.ts: models (raw-JSON questions), scoring, presets
       exam_api.dart              question bank sampling, community exams, /exam-attempts
@@ -100,7 +102,8 @@ lib/
       exams_home_screen.dart     resume card, quick practice, mocks, attempts, community
       exam_runner_screen.dart    /exam/run full-screen: PageView, palette, timer + auto-submit, wakelock, PopScope
       exam_result_screen.dart    /exam/result (fresh, saves attempt) and /exam/attempt/:id; score, topics, SWOT, review,
-                                 "Ask the AI tutor" per question (needs the saved attempt id)
+                                 "Ask the AI tutor" per question (needs the saved attempt id); share button
+      result_card.dart           ResultCard (4:5, 1080×1350 PNG via RepaintBoundary) + sheet: share_plus / post to feed
     billing/
       billing_api.dart           BillingStatus/Limits/Price, /billing/status|razorpay/order|razorpay/verify, billingStatusProvider
       razorpay_checkout.dart     openRazorpay(order): native Checkout → RazorpayResult | null (cancelled) | ApiException
@@ -116,6 +119,7 @@ test/auth_test.dart              interceptor/refresh/sign-in/ApiException tests 
 test/exam_engine_test.dart       golden tests: must match outstagram-web's engine.ts exactly (fixtures/exam_golden.json)
 test/math_text_test.dart         LaTeX clean-up/parsing
 test/billing_test.dart           status parsing, price format, paywall error → sheet, no keys / Pro states
+test/p6_share_test.dart          result card layout/summary, shared files → draft, own deep links ignored
 test/tutor_test.dart             SSE decoding, stream errors (429/402/404 bodies), normalizeMath, TutorMarkdown widget
 tool/exam_golden.ts              regenerates the golden fixtures with bun from ../outstagram-web (run after engine.ts changes)
 assets/brand/                    mark.svg (the logo symbol, from ../assets/01-icon-gradient.svg) + the logo kit README
@@ -215,6 +219,13 @@ Host specifics (Windows, user `karti`):
     (`res/drawable/ic_launcher_*.xml`, `splash_mark.xml`; adaptive icon in `mipmap-anydpi-v26`, dark-tile vector for API 24–25
     in `mipmap-anydpi`). No PNG mipmaps. To change the logo, regenerate them from the new path (scale 0.23 keeps it inside
     the adaptive safe zone). Brand navy `#101020` is in `res/values/colors.xml`.
+
+24. Launcher shortcuts (`res/xml/shortcuts.xml`) open `outstagram://app/<route>` on MainActivity; Flutter deep linking hands
+    the path to go_router. The router remembers that target while the session loads / until sign-in (`pending` in
+    `router.dart`). receive_sharing_intent also reports such VIEW intents as a "shared URL" on cold start, so
+    `draftFromShared` drops `outstagram://` links. The shortcut's `targetPackage` comes from the per-flavor `application_id` resValue.
+25. receive_sharing_intent 1.9 needs **compileSdk 37** (set in `app/build.gradle.kts`, with
+    `android.suppressUnsupportedCompileSdk=37` because AGP 9.0 knows 36). 1.8.1 doesn't build (JVM target mismatch).
 
 ---
 

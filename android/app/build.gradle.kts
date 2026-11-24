@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.cyto.outstagram"
-    compileSdk = flutter.compileSdkVersion
+    // 37: receive_sharing_intent 1.9 requires it (1.8.1 has a JVM-target mismatch). targetSdk is unchanged.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -33,11 +34,13 @@ android {
             dimension = "env"
             applicationIdSuffix = ".staging"
             resValue("string", "app_name", "Outstagram β")
+            resValue("string", "application_id", "com.cyto.outstagram.staging")
             manifestPlaceholders["authScheme"] = "com.cyto.outstagram.staging"
         }
         create("prod") {
             dimension = "env"
             resValue("string", "app_name", "Outstagram")
+            resValue("string", "application_id", "com.cyto.outstagram")
             manifestPlaceholders["authScheme"] = "com.cyto.outstagram"
         }
     }

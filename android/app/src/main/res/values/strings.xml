@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_new_post_short">Post</string>
+    <string name="shortcut_new_post_long">New post</string>
+    <string name="shortcut_practice_short">Practice</string>
+    <string name="shortcut_practice_long">Practice exam</string>
+    <string name="shortcut_tutor_short">AI tutor</string>
+    <string name="shortcut_tutor_long">AI tutor chats</string>
+</resources>

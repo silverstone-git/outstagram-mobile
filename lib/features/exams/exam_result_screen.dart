@@ -9,6 +9,7 @@ import '../tutor/tutor_chat_screen.dart';
 import 'exam_api.dart';
 import 'exam_session.dart';
 import 'exams_home_screen.dart';
+import 'result_card.dart';
 
 /// A past attempt, loaded from the server (`/exam/attempt/:id`).
 class AttemptScreen extends ConsumerWidget {
@@ -156,7 +157,16 @@ class _ResultViewState extends State<ResultView> {
         }).toList();
 
     return Scaffold(
-      appBar: AppBar(title: Text(r.examName, maxLines: 1, overflow: TextOverflow.ellipsis)),
+      appBar: AppBar(
+        title: Text(r.examName, maxLines: 1, overflow: TextOverflow.ellipsis),
+        actions: [
+          IconButton(
+            tooltip: 'Share result card',
+            icon: const Icon(Icons.ios_share_rounded),
+            onPressed: () => showResultCardSheet(context, r, widget.maxScore),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [

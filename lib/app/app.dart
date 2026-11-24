@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/compose/share_intent.dart';
 import 'router.dart';
 import 'theme.dart';
 
@@ -18,6 +19,7 @@ class OutstagramApp extends ConsumerWidget {
       // Staging is marked by the app name ("Outstagram β") and the chip on the sign-in screen;
       // a corner banner would cover the status bar on edge-to-edge screens.
       routerConfig: ref.watch(routerProvider),
+      builder: (context, child) => ShareIntentListener(child: child ?? const SizedBox.shrink()),
     );
   }
 }
