@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/net/api_error.dart';
 import '../../core/ui/feedback.dart';
+import '../billing/billing_api.dart';
 import '../feed/models.dart';
 import '../feed/social_api.dart';
 
@@ -34,7 +35,6 @@ class ComposeScreen extends ConsumerStatefulWidget {
 }
 
 class _ComposeScreenState extends ConsumerState<ComposeScreen> {
-  static const _maxBytes = 200 * 1024; // free plan per-file limit
   static const _maxImages = 10;
 
   final _caption = TextEditingController();
@@ -59,8 +59,17 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     super.dispose();
   }
 
-  /// Downscale + WebP, stepping quality down until it fits the free limit.
-  Future<Uint8List?> _compress(XFile f) async {
+  /// The plan's per-file limit (free: 200 kB). Falls back to the free limit offline.
+  Future<int> _maxBytes() async {
+    try {
+      return (await ref.read(billingStatusProvider.future)).limits.mediaBytes;
+    } catch (_) {
+      return Limits.free.mediaBytes;
+    }
+  }
+
+  /// Downscale + WebP, stepping quality down until it fits the plan's limit.
+  Future<Uint8List?> _compress(XFile f, int max) async {
     final raw = await f.readAsBytes();
     for (final (side, q) in [(1600, 82), (1440, 72), (1280, 62), (1080, 52), (900, 45)]) {
       final out = await FlutterImageCompress.compressWithList(
@@ -70,7 +79,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
         quality: q,
         format: CompressFormat.webp,
       );
-      if (out.length <= _maxBytes) return out;
+      if (out.length <= max) return out;
     }
     return null;
   }
@@ -83,9 +92,10 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
         : await _picker.pickMultiImage(limit: room);
     if (files.isEmpty) return;
     setState(() => _compressing = true);
+    final max = await _maxBytes();
     var skipped = 0;
     for (final f in files.take(room)) {
-      final bytes = await _compress(f);
+      final bytes = await _compress(f, max);
       if (bytes == null) {
         skipped++;
       } else if (mounted) {
@@ -221,7 +231,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
         ]),
         const SizedBox(height: 16),
         Text(
-          'Photos are compressed on your phone (WebP, ≤200 kB each) before upload.',
+          'Photos are compressed on your phone (WebP, ≤${fmtBytes(ref.watch(billingStatusProvider).value?.limits.mediaBytes ?? Limits.free.mediaBytes)} each) before upload.',
           style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
         ),
       ]),
