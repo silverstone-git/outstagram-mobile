@@ -17,7 +17,7 @@ Future<void> showStreakCelebration(BuildContext context, StreakStatus s) async {
   await showGeneralDialog<void>(
     context: context,
     barrierDismissible: false,
-    barrierColor: Colors.black.withValues(alpha: 0.82),
+    barrierColor: Colors.black.withValues(alpha: 0.94),
     transitionDuration: const Duration(milliseconds: 280),
     pageBuilder: (_, _, _) => _Celebration(status: s, askReminders: askReminders),
     transitionBuilder: (_, anim, _, child) => FadeTransition(opacity: anim, child: child),

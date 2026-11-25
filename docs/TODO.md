@@ -166,7 +166,7 @@ Next, needs the user:
 - [x] **Daily streak** (2026-11-25): any finished exam with an answer counts the day (user's time zone); 5-question
       pop quizzes from the chosen subject; streak screen (flame, week strip, 6-week calendar, milestones, 250-day reward
       card), chips in the Feed/Exams app bars, full-screen celebration with confetti; local reminders at the chosen time,
-      21:30 and 23:00 on at-risk days, come-back messages after. 250 days = 60 AI prompts/hour + 1000 saved chats for good.
+      21:00 and 22:30 on at-risk days, come-back messages after. 250 days = 60 AI prompts/hour + 1000 saved chats for good.
 - [ ] Streak ideas for later: streak freeze (skip one day), friends' streaks on profiles, a home-screen widget.
 - [ ] Local notifications: "5 minutes left" when leaving a running exam; "your tutor is back" when the quota resets
       (flutter_local_notifications is in now; reuse `StreakReminders`' plugin instance).
