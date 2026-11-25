@@ -16,6 +16,14 @@ Tick items off here (and in `AGENTS.md` §1) when done. Last updated: 2026-11-25
       minutes ahead on `/streak` on a day the quiz isn't done).
 - [ ] **Supabase Redirect URLs** for the browser fallback (`docs/auth.md` §4).
 - [ ] **Clean prod test data before release:** QA account `qa_tester1` (user_id 7, created 2026-11-24 by Claude for adb QA).
+      QA on 2026-11-25 added: 2 exam attempts (Quantum Mechanics online, Solid State offline), 1 tutor message in
+      the Classical Mechanics chat, 1 unpaid Razorpay order (14:45 UTC). The app showed the account on **Free**.
+- [x] **On-device QA of build 1038 (2026-11-25):** smoke, offline pack + upload later, exam alerts, App Links,
+      widget, checkout up to Razorpay all pass. Fixed after it: CI APKs had a random signing key (PR #8), BACK
+      from App Link/widget/shortcut pages closed the app, BACK closed the app from the comments sheet after a
+      delete, stale Home after deleting a post, profile stats after offline uploads, a late "5 min left" alert,
+      search > 50 chars, "1 topics". Still open: comment rows show an initial instead of the avatar; check the
+      tutor's `x(A cos(ωt+φ1)` rendering (QA couldn't see the raw text).
 - [ ] **On-device QA of P2**: feed/explore, like/double-tap, comments, search → follow → approve (two accounts),
       post with 1 and several photos, text-only post, delete, profile counts, theme toggle, sign-out/in.
 

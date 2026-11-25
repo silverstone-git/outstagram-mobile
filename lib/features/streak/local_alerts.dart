@@ -21,6 +21,7 @@ abstract final class ExamAlerts {
         title: '⏳ About 5 minutes left: $name',
         body: "The clock kept running while you were away. You've answered $left of ${s.questions.length}.",
         route: route,
+        exactOnly: true, // inexact alarms came up to ~20 min late in QA (2026-11-25)
       );
     }
     await r.alertAt(

@@ -66,6 +66,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           padding: const EdgeInsets.only(right: 12),
           child: TextField(
             autofocus: true,
+            maxLength: 50, // the server's limit for q
             onChanged: _onChanged,
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
@@ -75,6 +76,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   ? const Padding(padding: EdgeInsets.all(14), child: SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)))
                   : null,
               contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              counterText: '',
             ),
           ),
         ),
