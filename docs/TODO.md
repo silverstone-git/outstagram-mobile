@@ -1,7 +1,7 @@
 # TODO: Outstagram mobile
 
 Ordered roughly by priority. Each item says *what*, *why*, and *how* so a fresh session can pick it up.
-Tick items off here (and in `AGENTS.md` §1) when done. Last updated: 2026-11-25.
+Tick items off here (and in `AGENTS.md` §1) when done. Last updated: 2026-11-25 (evening: tiers, web profiles, APK link live).
 
 ## 0. Verify right now (quick)
 
@@ -102,8 +102,9 @@ Built: `lib/features/tutor/` (see `AGENTS.md` §2). Entry points: "Ask the AI tu
       hidden), deleting a chat, leaving mid-answer.
 - [ ] One answer rendered "x(A cos(ωt+φ₁)" where "x(t) = A cos…" was expected. A widget test renders that LaTeX
       correctly, so it's most likely the model's text; check the stored message if it shows up again.
-- [ ] Limit errors (429/402) currently show inline text only. P5 turns them into the paywall sheet.
-- [ ] Local notification when the hourly quota resets (PLAN §5), pinch-zoom on long equations.
+- [x] Limit errors open the paywall sheet (P5, 2026-11-24; three tiers 2026-11-25).
+- [x] Local notification when the hourly quota resets (`TutorAlerts`, 2026-11-25).
+- [ ] Pinch-zoom on long equations.
 
 Original notes:
 
@@ -150,7 +151,7 @@ per-photo limit follows the plan (`limits.media_bytes`). The button is hidden wh
       back out → sheet unchanged; Netbanking demo bank Failure → Checkout's own retry screen; Success → "Welcome to Pro",
       sheet shows "Pro until Dec 24, 2026". This account's test Checkout offers no UPI, so `success@razorpay` doesn't apply.
 - [ ] Not yet tried on device: paywall from a real tutor 429 (needs 10 prompts in an hour on a free account), Pro photo size.
-- [ ] `outstagram-web` Paywall still says "Pay by UPI with success@razorpay"; same fix as the app's hint.
+- [x] `outstagram-web` Paywall test-mode hint fixed (Netbanking demo bank) in the three-tier rewrite (web PR #8).
 - [ ] Clean test `payment`/`userplan` rows off prod before the public release (qa_tester1 is Pro until 2026-12-24).
 
 ## 6. Social gaps (server + app)
@@ -164,7 +165,9 @@ per-photo limit follows the plan (`limits.media_bytes`). The button is hidden wh
       followers), Edit profile (name, bio), long-press to delete a comment (yours, or any on your post),
       `/p/:id` post page + "Share link" / "Open post" in the post ⋮ menu, tap a photo → full-screen pinch/double-tap
       zoom, video playback (`video_player`, tap to play, muted until unmuted). Needs on-device QA.
-- [ ] Web: same features (unfollow, decline, lists, edit profile, delete comment) and a `/p/<id>` page (also needed for App Links).
+- [x] Web (2026-11-25, web PRs #7/#8): `/p/?id=` post page, other users' profiles at `/u/?name=` (follow / requested /
+      unfollow, follower + following lists, streak badge, posts grid, share), clickable post authors.
+- [ ] Web still lacks: declining follow requests, editing name/bio, deleting comments, user search (the app has all of them).
 - [ ] "liked by" list UI (`/posts/{id}/likes/{page}` exists).
 
 ## 7. P6: Mobile extras (`PLAN.md` §5)
@@ -183,11 +186,12 @@ Next, needs the user:
 - [x] **App Links** (2026-11-25): share links are `https://aryan.cfd/outstagram/p/?id=<post>` and `/u/?name=<user>`
       (real folders on the static host; the web opens the post, outstagram-web PR #7). The manifest claims
       `/outstagram/p` + `/outstagram/u` with `autoVerify`; `router.dart` `appLinkTarget` maps them to `/p/:id`, `/u/:name`.
-- [ ] **Upload `android/assetlinks.json` to `https://aryan.cfd/.well-known/assetlinks.json`** (portfolio box, domain
+- [x] **`assetlinks.json` uploaded** by the user to `https://aryan.cfd/.well-known/assetlinks.json` (2026-11-25);
+      verified on the S22 (`pm get-app-links` → `aryan.cfd: verified`). Add the Play app-signing SHA-256 at release (P7).
       root, `Content-Type: application/json`, no redirect). Both package names, debug-key SHA-256. Until then Android
       shows a chooser / opens the browser. Check: `adb shell pm verify-app-links --re-verify com.cyto.outstagram`, then
       `adb shell pm get-app-links com.cyto.outstagram`. Add the Play app-signing SHA-256 at release (P7).
-- [ ] Web: profile page for `/u/?name=` (the web has no other-user profile view yet; the link opens the app or the web home).
+- [x] Web: profile page for `/u/?name=` (web PR #8).
 - [x] **Daily streak** (2026-11-25): any finished exam with an answer counts the day (user's time zone); 5-question
       pop quizzes from the chosen subject; streak screen (flame, week strip, 6-week calendar, milestones, 250-day reward
       card), chips in the Feed/Exams app bars, full-screen celebration with confetti; local reminders at the chosen time,
@@ -229,6 +233,7 @@ app icon and splash done 2026-11-24 (vector, from the new logo kit); Play needs 
 - Remove `build_runner` from dev deps if codegen is never adopted.
 - [x] CI job `publish-apk` (2026-11-25): pushes to `main` build the prod APK and **replace** `apps/outstagram.apk`
       in the public `pariksha` bucket (one object, overwritten). Needs the secrets in `docs/environments.md` → "Friends' APK link".
-- [ ] Point the web landing's `APPS.androidApk` (`outstagram-web/src/features/public/routes.ts`, now a Drive link) at `https://outsiebucket.aryan.cfd/apps/outstagram.apk` once the first upload exists.
+- [x] Friends' APK: `https://outsiebucket.aryan.cfd/apps/outstagram.apk` (+ `outstagram.json`: build/commit/date), replaced by
+      CI on every push to main (build 1038 on 2026-11-25). The web landing's Android button points there (web PR #10).
 - Add the mobile app to the cross-project roadmap in `outstagram-web/TODO.md`.
 - Upgrade plugins that warn about "Built-in Kotlin" when new versions exist (build output lists them).

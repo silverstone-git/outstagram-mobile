@@ -12,7 +12,8 @@ status, the repository map and the commands. Deep dives live in `docs/`:
 | `docs/qa.md` | On-device QA loop, rules (the phone is the user's), what can't be tested, lessons (helpers: `tool/qa/qa.sh`) |
 | `PLAN.md` | The original product/architecture plan (phases P0–P7, mobile-only extras). Background, not status |
 
-Last updated: 2026-11-25 (email codes, password reset, confirmed-email gate, daily streak + pop quizzes + local reminders).
+Last updated: 2026-11-25 (social basics, App Links, streak freezes/friends/widget, offline packs, local alerts, videos,
+Free/Pro/Contributor plans, friends' APK link).
 
 ---
 
