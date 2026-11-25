@@ -123,7 +123,7 @@ skill chips (`/ai/skills`), quota pill (`/ai/quota`), tutor library (`/ai/chats`
 
 | | Free | Pro ₹99 / 30 days | Contributor ₹499 / 30 days |
 |---|---|---|---|
-| Photo size | 200 kB | 4 MB | 4 MB |
+| Photo size (paid plans: compressed lightly, up to 4096 px) | 200 kB | 4 MB | 20 MB |
 | Video size (posted as is, no compression yet) | no videos | 4 MB | 500 MB |
 | Photos + videos per post | 4 | 4 | 4 |
 | Posts | 50 | 400 | unlimited |

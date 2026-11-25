@@ -128,7 +128,13 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   Future<Uint8List?> _compress(XFile f, int max) async => _compressBytes(await f.readAsBytes(), max);
 
   Future<Uint8List?> _compressBytes(Uint8List raw, int max) async {
-    for (final (side, q) in [(1600, 82), (1440, 72), (1280, 62), (1080, 52), (900, 45)]) {
+    // Paid plans (4 MB Pro, 20 MB Contributor) keep big, high-quality photos; Free steps down to fit 200 kB.
+    final steps = [
+      if (max >= 15000000) (4096, 92),
+      if (max >= 4000000) ...[(3072, 90), (2048, 88)],
+      (1600, 82), (1440, 72), (1280, 62), (1080, 52), (900, 45),
+    ];
+    for (final (side, q) in steps) {
       final out = await FlutterImageCompress.compressWithList(
         raw,
         minWidth: side,

@@ -15,7 +15,7 @@ const _free = {'ai_prompts_per_hour': 10, 'tutor_threads': 10, 'tutor_bytes': 10
 const _pro = {'ai_prompts_per_hour': 60, 'tutor_threads': 1000, 'tutor_bytes': 25000000, 'media_bytes': 4000000,
     'video_bytes': 4000000, 'media_per_post': 4, 'posts': 400};
 const _contributor = {'ai_prompts_per_hour': null, 'tutor_threads': 1000, 'tutor_bytes': 25000000,
-    'media_bytes': 4000000, 'video_bytes': 500000000, 'media_per_post': 4, 'posts': null};
+    'media_bytes': 20000000, 'video_bytes': 500000000, 'media_per_post': 4, 'posts': null};
 
 Map<String, dynamic> statusJson({String plan = 'free', bool payments = true, bool test = true}) => {
   'plan': plan,
