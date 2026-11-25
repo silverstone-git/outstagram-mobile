@@ -15,7 +15,7 @@ Tick items off here (and in `AGENTS.md` §1) when done. Last updated: 2026-11-25
       address, forgot password, change email. Also still unseen: a streak reminder actually firing (set "Remind me at" a few
       minutes ahead on `/streak` on a day the quiz isn't done).
 - [ ] **Supabase Redirect URLs** for the browser fallback (`docs/auth.md` §4).
-- [ ] **Clean prod test data before release:** QA account `qa_tester1` (user_id 7, created 2026-11-24 by Claude for adb QA).
+- [ ] **Clean prod test data before release:** the QA account (name in `../LOCAL.md`, created 2026-11-24 by Claude for adb QA).
       QA on 2026-11-25 added: 2 exam attempts (Quantum Mechanics online, Solid State offline), 1 tutor message in
       the Classical Mechanics chat, 1 unpaid Razorpay order (14:45 UTC). The app showed the account on **Free**.
 - [x] **On-device QA of build 1038 (2026-11-25):** smoke, offline pack + upload later, exam alerts, App Links,
@@ -151,7 +151,7 @@ from `/billing/status`; Razorpay native Checkout → `/billing/razorpay/verify` 
 per-photo limit follows the plan (`limits.media_bytes`). The button is hidden when `STORE=play` or the server has no keys.
 - [x] **Prod has Razorpay test keys** (2026-11-24): the `razorpay-test-*` secrets are attached to `outsie` too, so the
       pay button is live on prod app **and web** in test mode (no real money). Swap to live keys before charging anyone.
-- [ ] **Razorpay dashboard webhook for prod** (Test mode → Webhooks): URL `https://outsie-mgenvq5gwa-an.a.run.app/billing/razorpay/webhook`
+- [ ] **Razorpay dashboard webhook for prod** (Test mode → Webhooks): URL `https://outsie.aryan.cfd/billing/razorpay/webhook`
       (direct Cloud Run URL: Cloudflare in front of outsie.aryan.cfd blocked a non-browser user agent with 403),
       secret = `RAZORPAY_WEBHOOK_SECRET` in `env.razorpay.txt`, events `payment.captured`, `order.paid`, `payment.failed`.
       Only a safety net: the app's verify call already grants Pro. Signed requests verified with a self-test on 2026-11-24.
@@ -160,13 +160,13 @@ per-photo limit follows the plan (`limits.media_bytes`). The button is hidden wh
       sheet shows "Pro until Dec 24, 2026". This account's test Checkout offers no UPI, so `success@razorpay` doesn't apply.
 - [ ] Not yet tried on device: paywall from a real tutor 429 (needs 10 prompts in an hour on a free account), Pro photo size.
 - [x] `outstagram-web` Paywall test-mode hint fixed (Netbanking demo bank) in the three-tier rewrite (web PR #8).
-- [ ] Clean test `payment`/`userplan` rows off prod before the public release (qa_tester1 is Pro until 2026-12-24).
+- [ ] Clean test `payment`/`userplan` rows off prod before the public release (the QA account had test Pro/Contributor payments).
 
 ## 6. Social gaps (server + app)
 
 - [x] Profile photo (2026-11-25): `PUT/DELETE /me/avatar`, shown on profiles, posts, comments, search, requests (app + web).
 - [x] **Mutual-follow bug** (2026-11-25, server PR #9): approving the second half of a mutual follow 400'd
-      "Friendship already exists", so that request stayed pending (qa_tester1 1 follower / 0 following, cyto the
+      "Friendship already exists", so that request stayed pending (QA account 1 follower / 0 following, the other account the
       reverse). Fixed; the stuck request goes through when it's approved again from Activity.
 - [x] Social basics (2026-11-25; server PR #9, app branch `feat/social-basics`): unfollow / cancel request (tap
       Following/Requested), Decline on Activity, followers/following lists (tap the counts; Remove on your own
@@ -187,7 +187,7 @@ Done 2026-11-24 (verified on the S22, prod):
 - [x] **Launcher shortcuts:** New post, Practice exam, AI tutor (long-press the icon). Cold start goes to the route.
 
 Next, needs the user:
-- [ ] ~~**Push notifications (FCM):**~~ dropped for now (user, 2026-11-25: no Firebase). Original notes: needs a Firebase project linked to GCP `top-athlete-472606-v4` and the two Android
+- [ ] ~~**Push notifications (FCM):**~~ dropped for now (user, 2026-11-25: no Firebase). Original notes: needs a Firebase project linked to the GCP project and the two Android
       apps registered (`com.cyto.outstagram`, `.staging`) → `google-services.json` per flavor. Then server: `POST /me/devices`,
       a `devicetoken` table (re-run supabase-lockdown.sql), sends on follow request/approval/like/comment via FCM HTTP v1
       (service account on Cloud Run); app: `firebase_messaging`, notification permission (Android 13+), tap → deep link.

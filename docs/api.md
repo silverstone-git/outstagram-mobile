@@ -1,7 +1,6 @@
 # outsie API as used by the app
 
-Base URLs: prod `https://outsie.aryan.cfd` (= `https://outsie-mgenvq5gwa-an.a.run.app`),
-staging `https://outsie-staging-mgenvq5gwa-an.a.run.app`. Auth: `Authorization: Bearer <access_token>` on
+Base URLs: prod `https://outsie.aryan.cfd`, staging = `API_BASE` in `config/staging.json`. Auth: `Authorization: Bearer <access_token>` on
 everything except sign-in, `/auth/*`, `/billing/plans`, `/api/exam_presets`, `/api/question_bank/*` reads and `/pariksha` reads.
 
 The authoritative server reference is `outstagram-server/README.md`. This file records what the **app** relies on,

@@ -51,7 +51,7 @@ Run the same PKCE flow as the web, in a Custom Tab (`flutter_web_auth_2`), with 
 - One **Android** OAuth client per package name × signing cert (SHA-1): debug keystore, upload key, and the Play App Signing key. These have no secret and never appear in the code. They only let Google issue tokens to this app.
 - Supabase → Auth → Google → **Client IDs** (the authorized list): include the web client ID (comma-separated with any others). If the client ID you pasted was the Desktop one, swap it for the web one there.
 - The consent screen is still in **Testing**: only listed test users can sign in until it's published (already on the web roadmap).
-- Use the same GCP project as the existing web client: `top-athlete-472606-v4` according to the JSON, but check that it really owns the web client.
+- Use the same GCP project as the existing web client (check that it really owns the web client).
 
 ### Sessions on mobile: server change needed
 
@@ -188,7 +188,7 @@ Recommendation: ship v1 with option 3 (or hide the upsell), and add option 1 in 
 
 ## 9. Setup checklist (manual, consoles)
 
-- [ ] Google Cloud (project `top-athlete-472606-v4`) → Credentials → **Android** OAuth client: package `com.cyto.outstagram.staging`, SHA-1 of the debug keystore. Add one for `com.cyto.outstagram` too, and later the upload / Play App Signing SHA-1s.
+- [ ] Google Cloud (the outsie project) → Credentials → **Android** OAuth client: package `com.cyto.outstagram.staging`, SHA-1 of the debug keystore. Add one for `com.cyto.outstagram` too, and later the upload / Play App Signing SHA-1s.
 - [ ] Supabase (both projects) → Auth → Google → Client IDs: the Web client `595282356777-ppkjuihe…` must be in the list (it already is the main client ID). The Desktop client is not needed.
 - [ ] Supabase → Auth → URL configuration → Redirect URLs: `com.cyto.outstagram.staging://auth-callback` (staging project) and `com.cyto.outstagram://auth-callback` (prod). This is only for the browser fallback (long-press the Google button).
 - [ ] Deploy `feat/mobile-api` to `outsie-staging`, then re-run `scripts/supabase-lockdown.sql` (new `refreshtoken` table).
