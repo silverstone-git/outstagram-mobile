@@ -14,6 +14,7 @@ import '../../core/ui/feedback.dart';
 import '../billing/billing_api.dart';
 import '../billing/paywall_sheet.dart';
 import 'compose_draft.dart';
+import 'video_compressor.dart';
 import '../feed/models.dart';
 import '../feed/social_api.dart';
 
@@ -31,13 +32,17 @@ class PostsVersion extends Notifier<int> {
 class _Picked {
   _Picked(Uint8List this.bytes)
       : videoPath = null,
-        videoSize = 0;
+        videoSize = 0,
+        compressed = false;
 
-  _Picked.video(String this.videoPath, this.videoSize) : bytes = null;
+  _Picked.video(String this.videoPath, this.videoSize, {this.compressed = false}) : bytes = null;
 
   final Uint8List? bytes;
   final String? videoPath;
   final int videoSize;
+
+  /// The file is our compressed copy in the cache (delete it when done), not the user's original.
+  final bool compressed;
 
   bool get isVideo => videoPath != null;
 }
@@ -62,6 +67,8 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   var _category = PostCategory.academic;
   var _compressing = false;
   double? _progress; // non-null while posting
+  double? _videoProgress; // non-null while a video is being compressed
+  static const _compressor = VideoCompressor();
   List<String> _trending = const [];
 
   @override
@@ -111,8 +118,18 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
 
   @override
   void dispose() {
+    if (_videoProgress != null) _compressor.cancel();
+    for (final m in _images) {
+      if (m.compressed) VideoCompressor.deleteOutput(m.videoPath);
+    }
     _caption.dispose();
     super.dispose();
+  }
+
+  void _remove(int i) {
+    final m = _images[i];
+    setState(() => _images.removeAt(i));
+    if (m.compressed) VideoCompressor.deleteOutput(m.videoPath);
   }
 
   /// The plan's per-file limit (free: 200 kB). Falls back to the free limit offline.
@@ -172,7 +189,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   }
 
   Future<void> _pickVideo() async {
-    if (_images.length >= _maxImages) return;
+    if (_images.length >= _maxImages || _videoProgress != null) return;
     final f = await _picker.pickVideo(source: ImageSource.gallery);
     if (f != null) await _addVideo(f.path);
   }
@@ -186,9 +203,10 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     }
   }
 
-  /// Videos are posted as they are: Free can't post them, Pro up to 4 MB, Contributor up to 500 MB.
+  /// Free can't post videos. Clips that fit the plan (Pro 4 MB, Contributor 500 MB) are kept as they are;
+  /// bigger ones (and Contributor clips over 100 MB) are compressed on the phone to fit.
   Future<void> _addVideo(String path) async {
-    if (_images.length >= _maxImages || !mounted) return;
+    if (_images.length >= _maxImages || !mounted || _videoProgress != null) return;
     final size = await File(path).length();
     final lim = await _limits();
     if (!mounted) return;
@@ -199,16 +217,67 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
       return;
     }
     final max = lim.videoBytes;
-    if (max != null && size > max) {
-      final needs = plan == 'pro' ? 'contributor' : null;
-      final msg = 'This video is ${fmtBytes(size)}; videos are posted as they are and your plan allows '
-          '${fmtBytes(max)}.${needs == null ? ' Trim it in your gallery first.' : ''}';
-      showError(context, ApiException(msg, status: 413, code: 'media_too_large',
-          detail: {'code': 'media_too_large', 'message': msg, 'upgrade': needs != null, 'needs': ?needs,
-              'size': size, 'limit': max}));
+    final needs = plan == 'pro' ? 'contributor' : null;
+    void tooBig(String msg) => showError(context, ApiException(msg, status: 413, code: 'media_too_large',
+        detail: {'code': 'media_too_large', 'message': msg, 'upgrade': needs != null, 'needs': ?needs,
+            'size': size, 'limit': max}));
+
+    if (size <= (max ?? size) && size <= bigClipBytes) {
+      setState(() => _images.add(_Picked.video(path, size)));
       return;
     }
-    setState(() => _images.add(_Picked.video(path, size)));
+    VideoInfo info;
+    try {
+      info = await _compressor.probe(path);
+    } catch (_) {
+      if (mounted) showError(context, ApiException("Couldn't read this video."));
+      return;
+    }
+    if (!mounted) return;
+    final todo = planVideo(size: size, durationMs: info.durationMs, limit: max);
+    switch (todo) {
+      case KeepVideo():
+        setState(() => _images.add(_Picked.video(path, size)));
+        return;
+      case VideoTooLong(:final maxSeconds):
+        tooBig('This clip is too long to fit your plan (${fmtBytes(max ?? 0)} per video) even compressed. '
+            'Trim it to about $maxSeconds s in your gallery${needs == null ? '' : ', or upgrade'}.');
+        return;
+      case CompressVideo():
+        break;
+    }
+    setState(() => _videoProgress = 0);
+    String? out;
+    try {
+      out = await _compressor.compress(path, todo,
+          onProgress: (p) => mounted ? setState(() => _videoProgress = p) : null);
+      final outSize = await File(out).length();
+      if (!mounted) {
+        await VideoCompressor.deleteOutput(out);
+        return;
+      }
+      if (max == null || size <= max) {
+        // fitted already (a big Contributor clip): use whichever is smaller
+        if (outSize >= size) {
+          await VideoCompressor.deleteOutput(out);
+          setState(() => _images.add(_Picked.video(path, size)));
+          return;
+        }
+      } else if (outSize > max) {
+        await VideoCompressor.deleteOutput(out);
+        tooBig('Even compressed, this clip is ${fmtBytes(outSize)}; your plan allows ${fmtBytes(max)}. '
+            'Trim it in your gallery first.');
+        return;
+      }
+      setState(() => _images.add(_Picked.video(out!, outSize, compressed: true)));
+    } on VideoCompressCancelled {
+      // the user cancelled; nothing to add
+    } catch (e) {
+      await VideoCompressor.deleteOutput(out);
+      if (mounted) showError(context, ApiException("Couldn't compress this video. Try a shorter clip."));
+    } finally {
+      if (mounted) setState(() => _videoProgress = null);
+    }
   }
 
   void _addTag(String tag) {
@@ -219,7 +288,8 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     setState(() {});
   }
 
-  bool get _canPost => (_images.isNotEmpty || _caption.text.trim().isNotEmpty) && _progress == null && !_compressing;
+  bool get _canPost =>
+      (_images.isNotEmpty || _caption.text.trim().isNotEmpty) && _progress == null && !_compressing && _videoProgress == null;
 
   Future<void> _post() async {
     if (!_canPost) return;
@@ -259,6 +329,9 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
       await api.createPost(media: media, caption: _caption.text.trim(), category: _category);
       HapticFeedback.heavyImpact();
       ref.read(postsVersionProvider.notifier).bump();
+      for (final m in _images) {
+        if (m.compressed) VideoCompressor.deleteOutput(m.videoPath);
+      }
       if (!mounted) return;
       setState(() {
         _images.clear();
@@ -326,7 +399,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                           top: 4,
                           right: 4,
                           child: GestureDetector(
-                            onTap: () => setState(() => _images.removeAt(i)),
+                            onTap: () => _remove(i),
                             child: const CircleAvatar(
                               radius: 13,
                               backgroundColor: Colors.black54,
@@ -337,7 +410,12 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                       ],
                     ),
                   ),
-                if (_images.length < _maxImages) ...[
+                if (_videoProgress != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: VideoCompressTile(progress: _videoProgress!, onCancel: _compressor.cancel),
+                  ),
+                if (_images.length + (_videoProgress == null ? 0 : 1) < _maxImages) ...[
                   _PickTile(
                     icon: Icons.photo_library_outlined,
                     label: 'Gallery',
@@ -417,9 +495,48 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
 String _limitsText(Limits l) {
   final videos = !l.videosAllowed
       ? 'Videos need Pro or Contributor.'
-      : 'Videos are posted as they are, up to ${fmtLimit(l.videoBytes, fmtBytes)}.';
+      : 'Videos are compressed on your phone to fit your plan (up to ${fmtLimit(l.videoBytes, fmtBytes)} each).';
   return 'Up to ${l.mediaPerPost ?? 4} photos or videos per post. Photos are compressed on your phone '
       '(WebP, ≤${fmtBytes(l.mediaBytes)} each). $videos';
+}
+
+/// "Compressing 42%" with a cancel button, shown in the media strip while a clip is compressed.
+class VideoCompressTile extends StatelessWidget {
+  const VideoCompressTile({super.key, required this.progress, required this.onCancel});
+
+  final double progress;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: 132,
+          height: 132,
+          color: Colors.black87,
+          padding: const EdgeInsets.all(6),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            SizedBox(
+              width: 30,
+              height: 30,
+              child: CircularProgressIndicator(value: progress > 0 ? progress : null, color: Colors.white),
+            ),
+            const SizedBox(height: 6),
+            Text('Compressing ${(progress * 100).round()}%',
+                style: const TextStyle(color: Colors.white, fontSize: 12)),
+            TextButton(
+              onPressed: onCancel,
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white70,
+                minimumSize: const Size(64, 32),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text('Cancel'),
+            ),
+          ]),
+        ),
+      );
 }
 
 class _VideoTile extends StatelessWidget {
