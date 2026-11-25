@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/net/api_client.dart';
+import '../streak/streak_api.dart';
 import 'engine/engine.dart';
 
 final examApiProvider = Provider<ExamApi>((ref) => ExamApi(ref.watch(apiProvider)));
@@ -39,6 +40,7 @@ class AttemptSummary {
     required this.totalQuestions,
     required this.totalTimeSeconds,
     required this.takenAt,
+    this.streak,
   });
 
   factory AttemptSummary.fromJson(Map<String, dynamic> j) => AttemptSummary(
@@ -51,6 +53,7 @@ class AttemptSummary {
     totalQuestions: (j['total_questions'] as num?)?.toInt() ?? 0,
     totalTimeSeconds: (j['total_time_seconds'] as num?)?.toInt() ?? 0,
     takenAt: _utc('${j['datetime_taken']}'),
+    streak: j['streak'] is Map ? StreakStatus.fromJson(Map<String, dynamic>.from(j['streak'] as Map)) : null,
   );
 
   final String id;
@@ -62,6 +65,9 @@ class AttemptSummary {
   final int totalQuestions;
   final int totalTimeSeconds;
   final DateTime takenAt;
+
+  /// Only on a fresh save: the daily streak after this attempt (null if it didn't count).
+  final StreakStatus? streak;
 }
 
 class Attempt {
@@ -84,6 +90,16 @@ class ExamApi {
   Future<ExamConfig> preset(ExamPreset p) => generatePresetExam(p, sample);
 
   Future<ExamConfig> practice(String subject) => generatePracticeExam(subject, sample);
+
+  /// The daily streak quiz: 5 questions from the user's subject, 5 minutes, no negative marking.
+  Future<ExamConfig> popQuiz(String subject) async {
+    final p = await generatePracticeExam(subject, sample, count: 5);
+    return ExamConfig(
+      name: 'Pop quiz · $subject',
+      sections: p.sections,
+      settings: const ExamSettings(timerMinutes: 5, shuffleQuestions: true, shuffleOptions: true),
+    );
+  }
 
   Future<List<CommunityExam>> communityExams({int page = 1}) async => [
     for (final e in await _api.get<List<dynamic>>('/pariksha', query: {'page': page}))

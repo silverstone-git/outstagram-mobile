@@ -13,7 +13,10 @@ for Google (and later email codes / GitHub). The app never holds a Supabase sess
 | Google, browser fallback | `AuthRepository.googleBrowser` (long-press the Google button, or automatic if native is unsupported) | `POST /auth/supabase {auth_code, code_verifier}` | Supabase PKCE in a Custom Tab, back via `<scheme>://auth-callback` |
 | Refresh | `AuthController.refresh` (single-flight) | `POST /auth/refresh {refresh_token}` | Rotates the refresh token |
 | Sign out | `AuthController.signOut` | `POST /auth/logout {refresh_token}` | Best effort; local sign-out always happens |
-| Email code | (planned) | `POST /auth/email/start`, `/auth/email/verify` | `docs/TODO.md` §1 |
+| Email code | `AuthController.sendEmailCode` / `signInWithEmailCode` (`EmailCodeScreen`, `/sign-in/email`) | `POST /auth/email/start`, `/auth/email/verify` | Creates the account for a new address (username from the email, like Google) |
+| Forgot / change password | `sendPasswordResetCode` / `resetPassword` (`ForgotPasswordScreen`: `/forgot-password`, signed in `/account/password`) | `POST /auth/password/forgot`, `/auth/password/reset` | Signs every other device out |
+| Confirm email | `AccountApi.sendVerifyCode` / `verify` (`VerifyEmailScreen`, `/verify-email`) | `POST /me/email/verify/start`, `/me/email/verify` | After registering the app lands on `/verify-email?onboarding=1` ("Do it later" allowed) |
+| Change email | `AccountApi.sendChangeCode` / `changeEmail` (`ChangeEmailScreen`, `/account/email`) | `POST /me/email/change/start`, `/me/email/change` | The code proves the new address |
 
 Every sign-in response has the same shape:
 
@@ -110,13 +113,34 @@ redirects to (both projects use the same one).
 Get a SHA-1: `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android`
 (keytool: `C:/Program Files/Android/Android Studio/jbr/bin/keytool.exe`).
 
-**OAuth consent screen:** was in **Testing** (only listed test users can sign in). For friends: add their Gmail
-addresses as test users, or **Publish app**. Basic scopes (email, profile, openid) need no verification review.
+**OAuth consent screen:** **published (External), brand verification done** (user, 2026-11-25), so any Google
+account can sign in. Basic scopes (email, profile, openid) need no further review.
 
 **Supabase (each project) → Authentication → Providers → Google:** Client ID = the Web client (already),
 "Client IDs" list may hold extra IDs (not required for this flow). Skip-nonce-check must stay **off**; the app sends nonces.
 
-## 6. Troubleshooting
+## 6. Email codes and confirmed emails
+
+outsie asks **Supabase Auth** to send and check 6-digit codes (`POST {SUPABASE_URL}/auth/v1/otp` with `create_user: true`,
+then `/auth/v1/verify` with `type: "email"`); Supabase's **custom SMTP** delivers them. outsie never holds a Supabase
+session: a correct code only proves the person reads that inbox, and outsie then signs in / resets / confirms.
+Server code: `outstagram-server/src/repository/email_auth.py`.
+
+Supabase dashboard, **both** projects:
+- Project Settings → Authentication → SMTP: custom SMTP on (done by the user 2026-11-25).
+- Authentication → Providers → Email: enabled, **Email OTP Length = 6** (or set `OUTSIE_EMAIL_OTP_LENGTH` on outsie to match).
+- Authentication → Email Templates: **Magic Link** (sent to addresses Supabase already knows) and **Confirm signup**
+  (sent to new addresses) must show `{{ .Token }}`, e.g. `<h2>Your Outstagram code: {{ .Token }}</h2><p>It expires in 10 minutes.</p>`.
+  Without it the email only has a link and the app can't use it.
+- Authentication → Rate Limits: every call comes from outsie's IP, so "Token verifications" and "emails sent" are shared by all
+  users; raise them as usage grows. outsie adds its own per-address limits (5 codes / 5 wrong codes per 15 min).
+
+`user.email_verified_at` (added 2026-11-25) is set by Google and email-code sign-ins, the confirm flow, a password reset and
+an email change. Accounts that existed before were back-filled from Supabase `auth.users.email_confirmed_at` (Google users).
+Until it's set, posting, media upload and the AI tutor answer 403 `email_unverified` (`OUTSIE_REQUIRE_VERIFIED_EMAIL=0` on
+outsie turns the gate off). The profile shows an "Unverified" badge and a banner; the web shows a banner with the code field.
+
+## 7. Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
@@ -127,3 +151,6 @@ addresses as test users, or **Publish app**. Basic scopes (email, profile, openi
 | Browser fallback ends on the website instead of the app | Callback URL missing from Supabase Redirect URLs | §4 |
 | Signed out every ~30 min | Server without refresh tokens (old deploy) → `refresh_token` null | Deploy `outstagram-server` ≥ `fdecac2` |
 | "Session expired, please sign in again" right after reinstalling | Old refresh token was rotated elsewhere / family revoked | Sign in again (by design) |
+| The email arrives but has no code, only a link | The Supabase template lacks `{{ .Token }}` | §6: edit **Magic Link** and **Confirm signup** |
+| "We couldn't send the email right now" (502) | Supabase `/otp` failed: SMTP settings, sender domain, or Supabase's hourly email limit | Supabase → Logs → Auth; outsie logs `supabase /otp failed` |
+| "Please wait a minute before asking for another code" | Supabase's per-address 60 s limit | Wait; the app's Resend button already counts down 60 s |

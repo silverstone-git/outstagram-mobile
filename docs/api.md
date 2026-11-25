@@ -17,9 +17,28 @@ FastAPI puts the reason in `detail`, which can be:
 
 `ApiException.from` handles all three (`isPaywall`, `code`, `message`).
 
+**Unconfirmed email:** `POST /posts`, `/media-upload(/bulk)` and the tutor chat endpoints answer
+`403 {"detail": {"code": "email_unverified", "verify": true, "message": "…"}}` until the account's email is confirmed.
+`showError` (and the tutor) open the confirm-email sheet for it (`features/account/verify_gate.dart`).
+
+**`X-Timezone`:** the app's Dio sends the phone's IANA zone (e.g. `Asia/Kolkata`) on every request
+(`core/config/device_tz.dart`). The server counts streak days in it.
+
 ## Auth
 
-See `docs/auth.md`. `POST /login` is **form-encoded**; everything else is JSON.
+See `docs/auth.md`. `POST /login` is **form-encoded** (the `username` field also takes an email); everything else is JSON.
+
+| Call | Notes |
+|---|---|
+| `GET /auth/email/config` | `{enabled, code_length}` (6 unless `OUTSIE_EMAIL_OTP_LENGTH` says otherwise) |
+| `POST /auth/email/start {email}` | 204; emails a code. 429 when asked too often (5 per address per 15 min) |
+| `POST /auth/email/verify {email, code}` | sign-in response + `created` (true = a new account was made). 401 wrong/expired code; 429 after 5 wrong codes |
+| `POST /auth/password/forgot {email}` | 204 always (a code is sent only if an account has the address) |
+| `POST /auth/password/reset {email, code, new_password}` | sets the password (8+ chars), revokes every refresh token, returns a sign-in response |
+| `GET /me` | `{user_id, username, fullname, bio, email, email_verified, email_verified_at, verification_required}` |
+| `POST /me/email/verify/start` → `POST /me/email/verify {code}` | confirm the current email; returns `/me` |
+| `POST /me/email/change/start {email}` → `POST /me/email/change {email, code}` | 409 if another account has it; the new email counts as confirmed; returns `/me` |
+| `POST /register` | now 409 with a readable `detail` for a taken username or email (was a 500) |
 
 ## Social (implemented in the app)
 
@@ -80,6 +99,13 @@ Quirks:
 | `GET /pariksha/{id}` | `sections` (newer) or `exam_json_str` (a question list or a full config) |
 | `POST /exam-attempts` | `{exam_id?, exam_title, score, max_score, accuracy, total_questions, total_time_seconds, result}`; `result` is the web's `ExamResult` JSON (≤ 2 MB). The app writes the same shape, so attempts open on both clients |
 | `GET /exam-attempts?page=n`, `GET /exam-attempts/{id}` | summaries; full attempt adds `result` |
+| `POST /exam-attempts` response `streak` | the daily streak after this attempt, plus `extended` (this attempt counted a new day), `milestone` (3, 7, 14, 30, 50, 75, 100, 150, 200, 250, 365, …) and `reward_unlocked`. `null` when the attempt doesn't count (no answered question) |
+| `GET /me/streak` | `{current, longest, today_done, at_risk, broken, lost, last_day, today, day_ends_at, tz, subject, days[] (last 42 local days), milestones, next_milestone, prev_milestone, reward{goal, unlocked, unlocked_at, days_left, ai_prompts_per_hour, tutor_threads}}`. The first read rebuilds the streak from past attempts |
+| `PUT /me/streak {subject?, tz?}` | pop-quiz subject (a `subjectGroups` key in the app) |
+
+Streak rules (server `src/repository/streaks.py`): a day counts when an exam with at least one answered question
+is saved; days are calendar days in `X-Timezone`; missing a whole day resets to 0. 250 days unlocks 60 AI prompts/hour,
+1000 saved tutor chats and Pro-size tutor storage for good (`plans.plan_of` → `perks: ["streak_reward"]`).
 
 Question text is LaTeX with **doubled backslashes** (`$\theta$` in the JSON); `MathText` collapses them like the web.
 

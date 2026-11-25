@@ -22,6 +22,14 @@ abstract final class Brand {
   static const logoLime = Color(0xFFB7FF39);
   static const logoTeal = Color(0xFF00C98B);
   static const lavender = Color(0xFFA8A9C7);
+  // daily streak flame (same in both themes)
+  static const flameCore = Color(0xFFFFF3B0);
+  static const flameYellow = Color(0xFFFFD43B);
+  static const flameOrange = Color(0xFFFF8A00);
+  static const flameRed = Color(0xFFFF3D2E);
+  static const flameMagenta = Color(0xFFFF2E93);
+  static const gold = Color(0xFFFFC83D);
+  static const ash = Color(0xFF6B6E8F);
 }
 
 ThemeData _base(ColorScheme cs) {
@@ -48,7 +56,10 @@ ThemeData _base(ColorScheme cs) {
       filled: true,
       fillColor: cs.surfaceContainerHigh,
       border: OutlineInputBorder(borderRadius: radius, borderSide: BorderSide.none),
-      focusedBorder: OutlineInputBorder(borderRadius: radius, borderSide: BorderSide(color: cs.primary, width: 1.6)),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide(color: cs.primary, width: 1.6),
+      ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     ),
     filledButtonTheme: FilledButtonThemeData(
@@ -76,49 +87,53 @@ ThemeData _base(ColorScheme cs) {
   );
 }
 
-final darkTheme = _base(const ColorScheme(
-  brightness: Brightness.dark,
-  primary: Brand.neon,
-  onPrimary: Brand.night,
-  secondary: Brand.nightRaised,
-  onSecondary: Colors.white,
-  tertiary: Brand.volt,
-  onTertiary: Brand.night,
-  error: Color(0xFFFF5C7A),
-  onError: Brand.night,
-  surface: Brand.night,
-  onSurface: Colors.white,
-  onSurfaceVariant: Color(0xFFA9ACCB),
-  surfaceContainerLowest: Color(0xFF0B0B1C),
-  surfaceContainerLow: Color(0xFF14152E),
-  surfaceContainer: Brand.nightCard,
-  surfaceContainerHigh: Color(0xFF22254A),
-  surfaceContainerHighest: Brand.nightRaised,
-  outline: Color(0xFF4A4E7E),
-  outlineVariant: Color(0xFF2F3262),
-));
+final darkTheme = _base(
+  const ColorScheme(
+    brightness: Brightness.dark,
+    primary: Brand.neon,
+    onPrimary: Brand.night,
+    secondary: Brand.nightRaised,
+    onSecondary: Colors.white,
+    tertiary: Brand.volt,
+    onTertiary: Brand.night,
+    error: Color(0xFFFF5C7A),
+    onError: Brand.night,
+    surface: Brand.night,
+    onSurface: Colors.white,
+    onSurfaceVariant: Color(0xFFA9ACCB),
+    surfaceContainerLowest: Color(0xFF0B0B1C),
+    surfaceContainerLow: Color(0xFF14152E),
+    surfaceContainer: Brand.nightCard,
+    surfaceContainerHigh: Color(0xFF22254A),
+    surfaceContainerHighest: Brand.nightRaised,
+    outline: Color(0xFF4A4E7E),
+    outlineVariant: Color(0xFF2F3262),
+  ),
+);
 
-final lightTheme = _base(const ColorScheme(
-  brightness: Brightness.light,
-  primary: Brand.emerald,
-  onPrimary: Colors.white,
-  secondary: Brand.mist,
-  onSecondary: Brand.ink,
-  tertiary: Brand.amber,
-  onTertiary: Colors.white,
-  error: Color(0xFFC62848),
-  onError: Colors.white,
-  surface: Brand.paper,
-  onSurface: Brand.ink,
-  onSurfaceVariant: Color(0xFF5A5D7A),
-  surfaceContainerLowest: Colors.white,
-  surfaceContainerLow: Colors.white,
-  surfaceContainer: Colors.white,
-  surfaceContainerHigh: Brand.mist,
-  surfaceContainerHighest: Color(0xFFDCDFEE),
-  outline: Color(0xFFB4B8D0),
-  outlineVariant: Color(0xFFDCDFEE),
-));
+final lightTheme = _base(
+  const ColorScheme(
+    brightness: Brightness.light,
+    primary: Brand.emerald,
+    onPrimary: Colors.white,
+    secondary: Brand.mist,
+    onSecondary: Brand.ink,
+    tertiary: Brand.amber,
+    onTertiary: Colors.white,
+    error: Color(0xFFC62848),
+    onError: Colors.white,
+    surface: Brand.paper,
+    onSurface: Brand.ink,
+    onSurfaceVariant: Color(0xFF5A5D7A),
+    surfaceContainerLowest: Colors.white,
+    surfaceContainerLow: Colors.white,
+    surfaceContainer: Colors.white,
+    surfaceContainerHigh: Brand.mist,
+    surfaceContainerHighest: Color(0xFFDCDFEE),
+    outline: Color(0xFFB4B8D0),
+    outlineVariant: Color(0xFFDCDFEE),
+  ),
+);
 
 /// Dark by default; remembered on the device (like the web's localStorage toggle).
 final themeModeProvider = NotifierProvider<ThemeModeController, ThemeMode>(ThemeModeController.new);

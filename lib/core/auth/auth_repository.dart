@@ -27,11 +27,13 @@ class AuthRepository {
   Future<Session> _session(Future<Response<dynamic>> req) =>
       _call(() async => Session.fromAuthResponse((await req).data as Map<String, dynamic>));
 
-  Future<Session> login(String username, String password) => _session(_dio.post(
-        '/login',
-        data: {'username': username, 'password': password},
-        options: Options(contentType: Headers.formUrlEncodedContentType),
-      ));
+  Future<Session> login(String username, String password) => _session(
+    _dio.post(
+      '/login',
+      data: {'username': username, 'password': password},
+      options: Options(contentType: Headers.formUrlEncodedContentType),
+    ),
+  );
 
   Future<void> register({
     required String fullname,
@@ -40,15 +42,19 @@ class AuthRepository {
     required String password,
     required DateTime dateOfBirth,
     String? bio,
-  }) =>
-      _call(() => _dio.post('/register', data: {
-            'fullname': fullname,
-            'username': username,
-            'email': email,
-            'password': password,
-            'bio': bio ?? '',
-            'date_of_birth': dateOfBirth.toIso8601String().substring(0, 10),
-          }));
+  }) => _call(
+    () => _dio.post(
+      '/register',
+      data: {
+        'fullname': fullname,
+        'username': username,
+        'email': email,
+        'password': password,
+        'bio': bio ?? '',
+        'date_of_birth': dateOfBirth.toIso8601String().substring(0, 10),
+      },
+    ),
+  );
 
   /// Native: Google ID token -> POST /auth/google.
   Future<Session> googleNative() async {
@@ -66,12 +72,14 @@ class AuthRepository {
     final verifier = randomUrlSafe(32);
     final challenge = base64Url.encode(sha256.convert(utf8.encode(verifier)).bytes).replaceAll('=', '');
     final callback = '${Env.authScheme}://auth-callback';
-    final url = Uri.parse('$supabaseUrl/auth/v1/authorize').replace(queryParameters: {
-      'provider': 'google',
-      'redirect_to': callback,
-      'code_challenge': challenge,
-      'code_challenge_method': 's256',
-    });
+    final url = Uri.parse('$supabaseUrl/auth/v1/authorize').replace(
+      queryParameters: {
+        'provider': 'google',
+        'redirect_to': callback,
+        'code_challenge': challenge,
+        'code_challenge_method': 's256',
+      },
+    );
 
     final String result;
     try {
@@ -88,6 +96,33 @@ class AuthRepository {
     if (code == null) throw ApiException('Sign-in did not complete, please try again');
     return _session(_dio.post('/auth/supabase', data: {'auth_code': code, 'code_verifier': verifier}));
   }
+
+  // --- emailed 6-digit codes (outsie asks Supabase to send and check them) ---
+
+  /// `{enabled, code_length}`; older servers don't have it.
+  Future<int> emailCodeLength() async {
+    try {
+      final r = await _dio.get('/auth/email/config');
+      return ((r.data as Map)['code_length'] as num?)?.toInt() ?? 6;
+    } catch (_) {
+      return 6;
+    }
+  }
+
+  Future<void> emailStart(String email) => _call(() => _dio.post('/auth/email/start', data: {'email': email}));
+
+  /// Signs in (or creates an account for a new address). `created` is true for a new account.
+  Future<(Session, bool)> emailVerify(String email, String code) => _call(() async {
+    final d =
+        (await _dio.post('/auth/email/verify', data: {'email': email, 'code': code})).data as Map<String, dynamic>;
+    return (Session.fromAuthResponse(d), d['created'] == true);
+  });
+
+  Future<void> forgotPassword(String email) => _call(() => _dio.post('/auth/password/forgot', data: {'email': email}));
+
+  /// Sets the new password, signs every other device out, and returns a session for this one.
+  Future<Session> resetPassword(String email, String code, String newPassword) =>
+      _session(_dio.post('/auth/password/reset', data: {'email': email, 'code': code, 'new_password': newPassword}));
 
   Future<Session> refresh(String refreshToken) =>
       _session(_dio.post('/auth/refresh', data: {'refresh_token': refreshToken}));

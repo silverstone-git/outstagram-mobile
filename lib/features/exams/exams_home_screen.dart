@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/net/api_error.dart';
-import '../../core/ui/feedback.dart';
 import 'engine/engine.dart';
 import 'exam_api.dart';
+import 'exam_launcher.dart';
+import '../streak/streak_api.dart';
+import '../streak/streak_screen.dart';
+import '../streak/streak_visuals.dart';
+
+export 'exam_launcher.dart' show compactButton;
 import 'exam_session.dart';
 
 final attemptsProvider = FutureProvider.autoDispose<List<AttemptSummary>>(
@@ -16,9 +20,6 @@ final attemptsProvider = FutureProvider.autoDispose<List<AttemptSummary>>(
 final communityExamsProvider = FutureProvider.autoDispose<List<CommunityExam>>(
   (ref) => ref.watch(examApiProvider).communityExams(),
 );
-
-/// The theme's filled buttons are full-width (Size.fromHeight); dialogs and rows need a compact one.
-final compactButton = FilledButton.styleFrom(minimumSize: const Size(64, 44));
 
 String fmtScore(double v) =>
     v == v.roundToDouble() ? v.toStringAsFixed(0) : double.parse(v.toStringAsFixed(2)).toString();
@@ -35,40 +36,21 @@ class _ExamsHomeScreenState extends ConsumerState<ExamsHomeScreen> {
 
   Future<void> _start(String key, Future<ExamConfig> Function() load, {String? examId}) async {
     if (_busy != null) return;
-    final saved = await ref.read(savedSessionProvider.future);
-    if (saved != null && mounted) {
-      final replace = await showDialog<bool>(
-        context: context,
-        builder: (c) => AlertDialog(
-          title: const Text('Discard your unfinished exam?'),
-          content: Text('"${saved.config.name}" is still in progress. Starting a new exam discards it.'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Keep it')),
-            FilledButton(style: compactButton, onPressed: () => Navigator.pop(c, true), child: const Text('Discard')),
-          ],
-        ),
-      );
-      if (replace != true) return;
-    }
-    setState(() => _busy = key);
-    try {
-      final config = await load();
-      final n = normalizeExamConfig(config).sections!.fold(0, (a, s) => a + s.questions.length);
-      if (n == 0) throw ApiException('No questions could be loaded for this exam. Try again in a moment.');
-      ref.read(examSessionProvider.notifier).start(config, examId: examId);
-      HapticFeedback.mediumImpact();
-      if (mounted) await context.push('/exam/run');
-    } catch (e) {
-      if (mounted) showError(context, e);
-    } finally {
-      if (mounted) setState(() => _busy = null);
-      ref.invalidate(savedSessionProvider);
-      ref.invalidate(attemptsProvider);
-    }
+    await launchExam(
+      context,
+      ref,
+      load,
+      examId: examId,
+      onLoading: (on) {
+        if (mounted) setState(() => _busy = on ? key : null);
+      },
+    );
+    ref.invalidate(attemptsProvider);
   }
 
   Future<void> _refresh() async {
     ref.invalidate(savedSessionProvider);
+    ref.read(streakProvider.notifier).reload();
     try {
       await Future.wait([ref.refresh(attemptsProvider.future), ref.refresh(communityExamsProvider.future)]);
     } catch (_) {
@@ -85,6 +67,7 @@ class _ExamsHomeScreenState extends ConsumerState<ExamsHomeScreen> {
       appBar: AppBar(
         title: const Text('Exams'),
         actions: [
+          StreakChip(status: ref.watch(streakProvider).value),
           IconButton(
             tooltip: 'Tutor library',
             icon: const Icon(Icons.auto_awesome_outlined),
@@ -101,6 +84,8 @@ class _ExamsHomeScreenState extends ConsumerState<ExamsHomeScreen> {
               'Practice, review every answer, and see where you lose marks.',
               style: TextStyle(color: cs.onSurfaceVariant),
             ),
+            const SizedBox(height: 16),
+            const StreakHomeCard(),
             if (saved != null) ...[const SizedBox(height: 16), _ResumeCard(session: saved)],
             _Section(icon: Icons.bolt_rounded, title: 'Quick practice', hint: '10 questions · 30 min'),
             Wrap(

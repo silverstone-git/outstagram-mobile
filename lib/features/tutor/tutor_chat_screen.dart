@@ -9,6 +9,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/net/api_error.dart';
+import '../account/verify_gate.dart';
 import '../billing/paywall_sheet.dart';
 import '../../core/ui/math_text.dart';
 import '../exams/exam_api.dart';
@@ -108,8 +109,7 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
   }
 
   /// Follow the stream only while the user is at (or near) the bottom.
-  bool get _nearBottom =>
-      !_scroll.hasClients || _scroll.position.maxScrollExtent - _scroll.position.pixels < 120;
+  bool get _nearBottom => !_scroll.hasClients || _scroll.position.maxScrollExtent - _scroll.position.pixels < 120;
 
   /// Deltas arrive every few ms; repaint at most ~16×/s.
   void _schedulePaint() {
@@ -187,7 +187,7 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
         _draft.text = msg;
         _error = err.code == 'ai_quota' ? '${err.message}${q?.resetHint ?? ''}' : err.message;
       });
-      showPaywallFor(context, err);
+      if (!showPaywallFor(context, err)) showVerifyEmailFor(context, err);
     } finally {
       _paint?.cancel();
       if (mounted) {
@@ -204,14 +204,16 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
   Future<void> _favourite(PickedEquation eq, TutorQuestion? q) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final fav = await ref.read(tutorApiProvider).addFavorite(
-        latex: eq.latex,
-        display: eq.display,
-        skill: _chosen.firstOrNull,
-        context: q == null ? null : (q.text.length > 300 ? q.text.substring(0, 300) : q.text),
-        attemptId: widget.attemptId,
-        questionId: widget.questionId,
-      );
+      final fav = await ref
+          .read(tutorApiProvider)
+          .addFavorite(
+            latex: eq.latex,
+            display: eq.display,
+            skill: _chosen.firstOrNull,
+            context: q == null ? null : (q.text.length > 300 ? q.text.substring(0, 300) : q.text),
+            attemptId: widget.attemptId,
+            questionId: widget.questionId,
+          );
       ref.invalidate(favoriteEquationsProvider);
       messenger
         ..hideCurrentSnackBar()
@@ -223,10 +225,10 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
               label: 'Undo',
-              onPressed: () => ref.read(tutorApiProvider).deleteFavorite(fav.id).then(
-                (_) => ref.invalidate(favoriteEquationsProvider),
-                onError: (_) {},
-              ),
+              onPressed: () => ref
+                  .read(tutorApiProvider)
+                  .deleteFavorite(fav.id)
+                  .then((_) => ref.invalidate(favoriteEquationsProvider), onError: (_) {}),
             ),
           ),
         );
@@ -370,11 +372,7 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
                       if (_messages.isEmpty) _Intro(chosen: _chosen, busy: _busy, onPick: _send),
                       for (final m in _messages)
                         if (!(m == last && !m.isUser && m.content.isEmpty && _busy))
-                          _Bubble(
-                            message: m,
-                            onPickEquation: (eq) => _favourite(eq, question),
-                            onTapLink: _openLink,
-                          ),
+                          _Bubble(message: m, onPickEquation: (eq) => _favourite(eq, question), onTapLink: _openLink),
                       if (_busy && (last?.content.isEmpty ?? true))
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
@@ -446,7 +444,12 @@ class _QuestionHeaderState extends State<_QuestionHeader> {
                     if (q.topic != null)
                       Text(
                         q.topic!.toUpperCase(),
-                        style: TextStyle(fontSize: 11, letterSpacing: 0.8, color: cs.primary, fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                          fontSize: 11,
+                          letterSpacing: 0.8,
+                          color: cs.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     MathText(q.text, maxLines: _open ? null : 2, style: const TextStyle(fontSize: 14, height: 1.35)),
                   ],
@@ -627,7 +630,9 @@ class _Composer extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Container(
-          decoration: BoxDecoration(border: Border(top: BorderSide(color: cs.outlineVariant))),
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: cs.outlineVariant)),
+          ),
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
           child: Column(
             mainAxisSize: MainAxisSize.min,

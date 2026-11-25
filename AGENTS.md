@@ -11,7 +11,7 @@ status, the repository map and the commands. Deep dives live in `docs/`:
 | `docs/TODO.md` | Roadmap and open work, including the email sign-in code + SMTP plan |
 | `PLAN.md` | The original product/architecture plan (phases P0–P7, mobile-only extras). Background, not status |
 
-Last updated: 2026-11-24 (new logo; P6 part 1: result cards, share-to-app, launcher shortcuts).
+Last updated: 2026-11-25 (email codes, password reset, confirmed-email gate, daily streak + pop quizzes + local reminders).
 
 ---
 
@@ -47,11 +47,12 @@ advantages (see `PLAN.md` §5).
 |---|---|---|
 | P0 Foundation | Flavors, configs, theme, router shell, Dio client, CI | ✅ done |
 | P1 Auth | Password + register, native Google, PKCE browser fallback, refresh tokens | ✅ done (Google sign-in verified on device 2026-11-24: Web client as `serverClientId` + Android client with the debug SHA-1) |
+| P1b Email | 6-digit email codes: sign-in, forgot/change password, confirm email (onboarding step with "Do it later"), change email; posting/uploads/tutor need a confirmed email | ✅ built 2026-11-25 (unit/widget tested; needs the Supabase email templates with `{{ .Token }}`, `docs/auth.md` §6; on-device QA pending) |
 | P2 Social | Feed/Explore, post card, likes, comments, search, profiles, follow requests, composer | ✅ done (needs on-device QA) |
 | P3 Exams | Dart port of the Pariksha engine, presets, practice, community exams, runner, results, history | ✅ done 2026-11-24 (verified on device; leftovers in `docs/TODO.md` §3) |
 | P4 AI tutor | SSE streaming, Markdown + LaTeX, skills, quota, library, saved equations, voice input | ✅ built 2026-11-24 (unit/widget tested; on-device QA pending, `docs/TODO.md` §4) |
 | P5 Paywall | 429/402/413 → upgrade sheet, Razorpay test | ✅ built 2026-11-24 (widget tested; prod on Razorpay test keys; payment verified on device 2026-11-24, `docs/TODO.md` §5) |
-| P6 Mobile extras | Push, share-target, result cards, App Links, offline packs | 🟡 result cards, share-target, launcher shortcuts done 2026-11-24 (verified on device); push + App Links need setup (`docs/TODO.md` §7) |
+| P6 Mobile extras | Push, share-target, result cards, App Links, offline packs | 🟡 result cards, share-target, launcher shortcuts done 2026-11-24 (verified on device); daily streak, pop quizzes and local streak reminders built 2026-11-25; push dropped (user: no Firebase); App Links need setup (`docs/TODO.md` §7) |
 | P7 Release | Upload key, Play Billing, account deletion, Play listing | ⏳ |
 
 **Testing setup decided by the user (2026-11-24):** the *prod* flavor talks to the **production** outsie +
@@ -71,6 +72,7 @@ lib/
     theme.dart                   brand tokens (from outstagram-web index.css), dark default, ThemeMode persisted
   core/
     config/env.dart              compile-time config (FLAVOR, API_BASE, GOOGLE_SERVER_CLIENT_ID, AUTH_SCHEME, WEB_BASE, STORE)
+    config/device_tz.dart        phone's IANA time zone (flutter_timezone) → X-Timezone header + tz.local for reminders
     auth/
       session.dart               AppUser, Session (access, refresh, expiresAt)
       session_store.dart         flutter_secure_storage persistence (key outsie_session_v1)
@@ -83,9 +85,16 @@ lib/
     ui/
       math_text.dart             MathText: inline/display LaTeX (flutter_math_fork), web-compatible clean-up
       avatar.dart                letter avatar coloured by username (the API has no profile photos)
-      feedback.dart              showError(context, e): snackbar, or the upgrade sheet for paywall errors
+      feedback.dart              showError(context, e): snackbar, the upgrade sheet for paywall errors, the confirm-email sheet for 403 email_unverified
+      code_field.dart            CodeField (6 boxes over one hidden field, autofill + paste, auto-submit), ResendButton (60 s)
   features/
-    auth/                        sign-in, register, splash, BrandMark (SVG mark + "Outsta"/"gram" text) and BrandSymbol
+    auth/                        sign-in, register, splash, BrandMark (SVG mark + "Outsta"/"gram" text) and BrandSymbol,
+                                 email_code_screen.dart (/sign-in/email), forgot_password_screen.dart (/forgot-password, /account/password)
+    account/                     account_api.dart (GET /me → meProvider, confirm/change email), verify_email_screen.dart (/verify-email),
+                                 account_screen.dart (/account, /account/email, VerifyEmailBanner), verify_gate.dart (403 → sheet)
+    streak/                      streak_api.dart (StreakStatus, streakProvider), streak_screen.dart (/streak, pop quiz, StreakHomeCard),
+                                 streak_visuals.dart (animated flame, chip, confetti, week strip, calendar, reward, milestones),
+                                 streak_celebration.dart (full-screen "Day N" after an exam), streak_reminders.dart (local notifications + copy)
     shell/                       AppShell (NavigationBar), ComingSoon placeholder
     feed/                        models.dart (Post, Comment, Profile, …), social_api.dart, post_card.dart,
                                  post_list.dart (infinite + pull-to-refresh), comments_sheet.dart, home_screen.dart
@@ -99,7 +108,8 @@ lib/
       engine/                    pure Dart port of outstagram-web engine.ts: models (raw-JSON questions), scoring, presets
       exam_api.dart              question bank sampling, community exams, /exam-attempts
       exam_session.dart          running exam (Notifier) autosaved to shared_preferences (exam_session_v1); resume
-      exams_home_screen.dart     resume card, quick practice, mocks, attempts, community
+      exams_home_screen.dart     streak card, resume card, quick practice, mocks, attempts, community
+      exam_launcher.dart         launchExam(): discard-unfinished dialog → load → runner (Exams tab and pop quiz); compactButton
       exam_runner_screen.dart    /exam/run full-screen: PageView, palette, timer + auto-submit, wakelock, PopScope
       exam_result_screen.dart    /exam/result (fresh, saves attempt) and /exam/attempt/:id; score, topics, SWOT, review,
                                  "Ask the AI tutor" per question (needs the saved attempt id); share button
@@ -121,6 +131,8 @@ test/math_text_test.dart         LaTeX clean-up/parsing
 test/billing_test.dart           status parsing, price format, paywall error → sheet, no keys / Pro states
 test/p6_share_test.dart          result card layout/summary, shared files → draft, own deep links ignored
 test/tutor_test.dart             SSE decoding, stream errors (429/402/404 bodies), normalizeMath, TutorMarkdown widget
+test/email_streak_test.dart      email-code/reset sign-in, register → confirm step, /me + 403 email_unverified, CodeField,
+                                 streak parsing, reminder copy, streak widgets
 tool/exam_golden.ts              regenerates the golden fixtures with bun from ../outstagram-web (run after engine.ts changes)
 assets/brand/                    mark.svg (the logo symbol, from ../assets/01-icon-gradient.svg) + the logo kit README
 config/{staging,prod}.json       public build config (dart-define-from-file)
@@ -226,6 +238,15 @@ Host specifics (Windows, user `karti`):
     `draftFromShared` drops `outstagram://` links. The shortcut's `targetPackage` comes from the per-flavor `application_id` resValue.
 25. receive_sharing_intent 1.9 needs **compileSdk 37** (set in `app/build.gradle.kts`, with
     `android.suppressUnsupportedCompileSdk=37` because AGP 9.0 knows 36). 1.8.1 doesn't build (JVM target mismatch).
+26. **flutter_local_notifications 23** pulls androidx.core 1.19, which needs **AGP 9.1.1 → Gradle 9.3.1**
+    (`android/settings.gradle.kts`, `gradle-wrapper.properties`) and **core library desugaring** (`app/build.gradle.kts`).
+    Its receivers (scheduled, boot, action) are in the manifest; the status icon `drawable/ic_stat_streak.xml` is only
+    referenced from Dart, so `res/raw/keep.xml` keeps it in shrunk release builds.
+27. Streak reminders are **local** (no push server, user decision 2026-11-25: no Firebase). They're re-planned every time
+    the app learns the streak (launch, resume, finished exam) and cancelled on sign-out. Inexact alarms only (no
+    SCHEDULE_EXACT_ALARM). Off until the user says yes (celebration button or the switch on `/streak`), which asks
+    for POST_NOTIFICATIONS on Android 13+. Tapping one opens `/streak?quiz=1`, which starts the pop quiz.
+28. Running `dart format` over `lib/` reflows files written in the older style; format only the files you touch.
 
 ---
 
