@@ -11,11 +11,15 @@ import 'session_store.dart';
 final sessionStoreProvider = Provider<SessionStore>((ref) => SessionStore());
 
 /// Dio without the auth interceptor: sign-in, refresh, logout.
-final bareDioProvider = Provider<Dio>((ref) => Dio(BaseOptions(
+final bareDioProvider = Provider<Dio>(
+  (ref) => Dio(
+    BaseOptions(
       baseUrl: Env.apiBase,
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 30),
-    )));
+    ),
+  ),
+);
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) => AuthRepository(ref.watch(bareDioProvider)));
 
@@ -29,6 +33,15 @@ class AuthController extends AsyncNotifier<Session?> {
   SessionStore get _store => ref.read(sessionStoreProvider);
 
   Session? get current => state.value;
+
+  /// Where to go right after this sign-in instead of the feed (e.g. the confirm-email step after
+  /// registering). The router takes it once.
+  String? _landing;
+  String? takeLanding() {
+    final l = _landing;
+    _landing = null;
+    return l;
+  }
 
   @override
   Future<Session?> build() => ref.read(sessionStoreProvider).read();
@@ -57,8 +70,22 @@ class AuthController extends AsyncNotifier<Session?> {
       dateOfBirth: dateOfBirth,
       bio: bio,
     );
+    _landing = '/verify-email?onboarding=1';
     await signInWithPassword(username, password);
   }
+
+  Future<void> sendEmailCode(String email) => _repo.emailStart(email.trim().toLowerCase());
+
+  Future<void> signInWithEmailCode(String email, String code) async {
+    final (s, _) = await _repo.emailVerify(email.trim().toLowerCase(), code);
+    await _set(s);
+  }
+
+  Future<void> sendPasswordResetCode(String email) => _repo.forgotPassword(email.trim().toLowerCase());
+
+  /// Works signed in or out; either way this device ends up signed in with the new password.
+  Future<void> resetPassword(String email, String code, String newPassword) async =>
+      _set(await _repo.resetPassword(email.trim().toLowerCase(), code, newPassword));
 
   /// Native sheet first; the browser flow if the device can't do it.
   Future<void> signInWithGoogle() async {

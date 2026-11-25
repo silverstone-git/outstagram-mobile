@@ -4,7 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../core/auth/auth_controller.dart';
 import '../core/auth/session.dart';
+import '../features/account/account_screen.dart';
+import '../features/account/verify_email_screen.dart';
 import '../features/activity/activity_screen.dart';
+import '../features/auth/email_code_screen.dart';
+import '../features/auth/forgot_password_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/auth/splash_screen.dart';
@@ -16,11 +20,12 @@ import '../features/exams/exams_home_screen.dart';
 import '../features/feed/home_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/social/search_screen.dart';
+import '../features/streak/streak_screen.dart';
 import '../features/tutor/tutor_chat_screen.dart';
 import '../features/tutor/tutor_library_screen.dart';
 import '../features/shell/app_shell.dart';
 
-const _authRoutes = {'/sign-in', '/register'};
+const _authRoutes = {'/sign-in', '/register', '/sign-in/email', '/forgot-password'};
 
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ValueNotifier<AsyncValue<Session?>>(const AsyncLoading());
@@ -52,7 +57,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/sign-in';
       }
       if (_authRoutes.contains(loc) || loc == '/splash') {
-        final to = pending ?? '/feed';
+        final to = ref.read(authControllerProvider.notifier).takeLanding() ?? pending ?? '/feed';
         pending = null;
         return to;
       }
@@ -62,8 +67,31 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
+      GoRoute(path: '/sign-in/email', builder: (_, _) => const EmailCodeScreen()),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (_, s) => ForgotPasswordScreen(email: s.uri.queryParameters['email']),
+      ),
+      // Signed in: confirm / change email, change password (the reset flow, prefilled)
+      GoRoute(
+        path: '/verify-email',
+        builder: (_, s) => VerifyEmailScreen(onboarding: s.uri.queryParameters['onboarding'] == '1'),
+      ),
+      GoRoute(path: '/account', builder: (_, _) => const AccountScreen()),
+      GoRoute(path: '/account/email', builder: (_, _) => const ChangeEmailScreen()),
+      GoRoute(
+        path: '/account/password',
+        builder: (_, s) => ForgotPasswordScreen(email: s.uri.queryParameters['email'], signedIn: true),
+      ),
+      GoRoute(
+        path: '/streak',
+        builder: (_, s) => StreakScreen(startQuiz: s.uri.queryParameters['quiz'] == '1'),
+      ),
       GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
-      GoRoute(path: '/u/:username', builder: (_, s) => UserProfileScreen(username: s.pathParameters['username']!)),
+      GoRoute(
+        path: '/u/:username',
+        builder: (_, s) => UserProfileScreen(username: s.pathParameters['username']!),
+      ),
       // Exams run full-screen, outside the tab shell.
       GoRoute(path: '/exam/run', builder: (_, _) => const ExamRunnerScreen()),
       GoRoute(
@@ -72,7 +100,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             ? FreshResultScreen(finished: s.extra! as FinishedExam)
             : const ExamsHomeScreen(), // extra is lost if the route is restored from scratch
       ),
-      GoRoute(path: '/exam/attempt/:id', builder: (_, s) => AttemptScreen(attemptId: s.pathParameters['id']!)),
+      GoRoute(
+        path: '/exam/attempt/:id',
+        builder: (_, s) => AttemptScreen(attemptId: s.pathParameters['id']!),
+      ),
       GoRoute(path: '/tutor', builder: (_, _) => const TutorLibraryScreen()),
       GoRoute(
         path: '/tutor/:attemptId/:questionId',
@@ -85,21 +116,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/feed', builder: (_, _) => const HomeScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/exams', builder: (_, _) => const ExamsHomeScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/create', builder: (_, _) => const ComposeScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/activity', builder: (_, _) => const ActivityScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
-          ]),
+          StatefulShellBranch(
+            routes: [GoRoute(path: '/feed', builder: (_, _) => const HomeScreen())],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: '/exams', builder: (_, _) => const ExamsHomeScreen())],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: '/create', builder: (_, _) => const ComposeScreen())],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: '/activity', builder: (_, _) => const ActivityScreen())],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen())],
+          ),
         ],
       ),
     ],

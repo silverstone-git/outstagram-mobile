@@ -1,3 +1,5 @@
+import '../account/account_api.dart';
+import '../account/account_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -162,13 +164,10 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
       final api = ref.read(socialApiProvider);
       var media = <Map<String, String>>[];
       if (_images.isNotEmpty) {
-        media = await api.upload(
-          [
-            for (var i = 0; i < _images.length; i++)
-              UploadFile(bytes: _images[i].bytes, filename: 'photo_$i.webp', mime: 'image/webp'),
-          ],
-          onProgress: (p) => mounted ? setState(() => _progress = p * 0.9) : null,
-        );
+        media = await api.upload([
+          for (var i = 0; i < _images.length; i++)
+            UploadFile(bytes: _images[i].bytes, filename: 'photo_$i.webp', mime: 'image/webp'),
+        ], onProgress: (p) => mounted ? setState(() => _progress = p * 0.9) : null);
       }
       await api.createPost(media: media, caption: _caption.text.trim(), category: _category);
       HapticFeedback.heavyImpact();
@@ -208,72 +207,112 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
         ],
         bottom: _progress == null
             ? null
-            : PreferredSize(preferredSize: const Size.fromHeight(3), child: LinearProgressIndicator(value: _progress)),
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(3),
+                child: LinearProgressIndicator(value: _progress),
+              ),
       ),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 32), children: [
-        SizedBox(
-          height: 132,
-          child: ListView(scrollDirection: Axis.horizontal, children: [
-            for (var i = 0; i < _images.length; i++)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Stack(children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Image.memory(_images[i].bytes, width: 132, height: 132, fit: BoxFit.cover),
-                  ),
-                  Positioned(
-                    top: 4,
-                    right: 4,
-                    child: GestureDetector(
-                      onTap: () => setState(() => _images.removeAt(i)),
-                      child: const CircleAvatar(radius: 13, backgroundColor: Colors.black54,
-                          child: Icon(Icons.close_rounded, size: 16, color: Colors.white)),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          if (ref.watch(meProvider).value?.needsVerification ?? false) ...[
+            const VerifyEmailBanner(reason: 'share posts'),
+            const SizedBox(height: 12),
+          ],
+          SizedBox(
+            height: 132,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                for (var i = 0; i < _images.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Image.memory(_images[i].bytes, width: 132, height: 132, fit: BoxFit.cover),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: GestureDetector(
+                            onTap: () => setState(() => _images.removeAt(i)),
+                            child: const CircleAvatar(
+                              radius: 13,
+                              backgroundColor: Colors.black54,
+                              child: Icon(Icons.close_rounded, size: 16, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ]),
-              ),
-            if (_images.length < _maxImages) ...[
-              _PickTile(icon: Icons.photo_library_outlined, label: 'Gallery', busy: _compressing, onTap: () => _pick(ImageSource.gallery)),
-              const SizedBox(width: 8),
-              _PickTile(icon: Icons.photo_camera_outlined, label: 'Camera', busy: false, onTap: () => _pick(ImageSource.camera)),
-            ],
-          ]),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _caption,
-          minLines: 3,
-          maxLines: 8,
-          maxLength: 2200,
-          textCapitalization: TextCapitalization.sentences,
-          onChanged: (_) => setState(() {}),
-          decoration: const InputDecoration(hintText: 'What did you learn, build or ace today?'),
-        ),
-        if (_trending.isNotEmpty) ...[
-          Text('Trending', style: TextStyle(fontWeight: FontWeight.w700, color: cs.onSurfaceVariant)),
-          const SizedBox(height: 6),
-          Wrap(spacing: 6, runSpacing: 6, children: [
-            for (final t in _trending) ActionChip(label: Text('#$t'), onPressed: () => _addTag(t)),
-          ]),
-          const SizedBox(height: 16),
-        ],
-        Text('Category', style: TextStyle(fontWeight: FontWeight.w700, color: cs.onSurfaceVariant)),
-        const SizedBox(height: 6),
-        Wrap(spacing: 6, runSpacing: 6, children: [
-          for (final c in PostCategory.values)
-            ChoiceChip(
-              label: Text('${c.emoji} ${c.label}'),
-              selected: _category == c,
-              onSelected: (_) => setState(() => _category = c),
+                if (_images.length < _maxImages) ...[
+                  _PickTile(
+                    icon: Icons.photo_library_outlined,
+                    label: 'Gallery',
+                    busy: _compressing,
+                    onTap: () => _pick(ImageSource.gallery),
+                  ),
+                  const SizedBox(width: 8),
+                  _PickTile(
+                    icon: Icons.photo_camera_outlined,
+                    label: 'Camera',
+                    busy: false,
+                    onTap: () => _pick(ImageSource.camera),
+                  ),
+                ],
+              ],
             ),
-        ]),
-        const SizedBox(height: 16),
-        Text(
-          'Photos are compressed on your phone (WebP, ≤${fmtBytes(ref.watch(billingStatusProvider).value?.limits.mediaBytes ?? Limits.free.mediaBytes)} each) before upload.',
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-        ),
-      ]),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _caption,
+            minLines: 3,
+            maxLines: 8,
+            maxLength: 2200,
+            textCapitalization: TextCapitalization.sentences,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(hintText: 'What did you learn, build or ace today?'),
+          ),
+          if (_trending.isNotEmpty) ...[
+            Text(
+              'Trending',
+              style: TextStyle(fontWeight: FontWeight.w700, color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [for (final t in _trending) ActionChip(label: Text('#$t'), onPressed: () => _addTag(t))],
+            ),
+            const SizedBox(height: 16),
+          ],
+          Text(
+            'Category',
+            style: TextStyle(fontWeight: FontWeight.w700, color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final c in PostCategory.values)
+                ChoiceChip(
+                  label: Text('${c.emoji} ${c.label}'),
+                  selected: _category == c,
+                  onSelected: (_) => setState(() => _category = c),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Photos are compressed on your phone (WebP, ≤${fmtBytes(ref.watch(billingStatusProvider).value?.limits.mediaBytes ?? Limits.free.mediaBytes)} each) before upload.',
+            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -300,13 +339,16 @@ class _PickTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: cs.outlineVariant),
         ),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          busy
-              ? const SizedBox.square(dimension: 26, child: CircularProgressIndicator(strokeWidth: 2.5))
-              : Icon(icon, size: 30, color: cs.primary),
-          const SizedBox(height: 6),
-          Text(label),
-        ]),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            busy
+                ? const SizedBox.square(dimension: 26, child: CircularProgressIndicator(strokeWidth: 2.5))
+                : Icon(icon, size: 30, color: cs.primary),
+            const SizedBox(height: 6),
+            Text(label),
+          ],
+        ),
       ),
     );
   }

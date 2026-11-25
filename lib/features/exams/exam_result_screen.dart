@@ -10,6 +10,8 @@ import 'exam_api.dart';
 import 'exam_session.dart';
 import 'exams_home_screen.dart';
 import 'result_card.dart';
+import '../streak/streak_api.dart';
+import '../streak/streak_celebration.dart';
 
 /// A past attempt, loaded from the server (`/exam/attempt/:id`).
 class AttemptScreen extends ConsumerWidget {
@@ -68,6 +70,14 @@ class _FreshResultScreenState extends ConsumerState<FreshResultScreen> {
         });
       }
       ref.invalidate(attemptsProvider);
+      final streak = saved.streak;
+      if (streak != null) {
+        ref.read(streakProvider.notifier).apply(streak);
+        if (streak.extended && mounted) {
+          await Future<void>.delayed(const Duration(milliseconds: 450)); // let the score land first
+          if (mounted) await showStreakCelebration(context, streak);
+        }
+      }
     } catch (e) {
       debugPrint('save attempt failed: $e');
       if (mounted) setState(() => _save = _Save.failed);

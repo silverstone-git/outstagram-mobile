@@ -53,8 +53,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   void _passwordSignIn() {
     if (!_form.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    _run(_Busy.password,
-        () => ref.read(authControllerProvider.notifier).signInWithPassword(_username.text, _password.text));
+    _run(
+      _Busy.password,
+      () => ref.read(authControllerProvider.notifier).signInWithPassword(_username.text, _password.text),
+    );
   }
 
   @override
@@ -70,87 +72,123 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               constraints: const BoxConstraints(maxWidth: 420),
               child: Form(
                 key: _form,
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  const Center(child: BrandSymbol(size: 88)),
-                  const SizedBox(height: 14),
-                  const Center(child: BrandMark(size: 40, showMark: false)),
-                  const SizedBox(height: 10),
-                  Text(
-                    'STUDY SMARTER WITH AI',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13, letterSpacing: 3),
-                  ),
-                  if (Env.isStaging) ...[
-                    const SizedBox(height: 8),
-                    Center(
-                      child: Chip(
-                        label: const Text('staging'),
-                        visualDensity: VisualDensity.compact,
-                        side: BorderSide(color: cs.tertiary),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Center(child: BrandSymbol(size: 88)),
+                    const SizedBox(height: 14),
+                    const Center(child: BrandMark(size: 40, showMark: false)),
+                    const SizedBox(height: 10),
+                    Text(
+                      'STUDY SMARTER WITH AI',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13, letterSpacing: 3),
+                    ),
+                    if (Env.isStaging) ...[
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Chip(
+                          label: const Text('staging'),
+                          visualDensity: VisualDensity.compact,
+                          side: BorderSide(color: cs.tertiary),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 40),
+                    if (GoogleAuth.configured) ...[
+                      FilledButton.icon(
+                        onPressed: busy ? null : _google,
+                        onLongPress: busy ? null : _googleBrowser, // escape hatch if the sheet misbehaves
+                        icon: _busy == _Busy.google
+                            ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.4))
+                            : const _GoogleG(),
+                        label: const Text('Continue with Google'),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: busy ? null : () => context.push('/sign-in/email'),
+                        icon: const Icon(Icons.mail_outline_rounded),
+                        label: const Text('Continue with email'),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          const Expanded(child: Divider()),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text('or with a password', style: TextStyle(color: cs.onSurfaceVariant)),
+                          ),
+                          const Expanded(child: Divider()),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                    TextFormField(
+                      controller: _username,
+                      enabled: !busy,
+                      autofillHints: const [AutofillHints.username],
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        hintText: 'Username or email',
+                        prefixIcon: Icon(Icons.alternate_email),
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your username or email' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _password,
+                      enabled: !busy,
+                      obscureText: !_showPassword,
+                      autofillHints: const [AutofillHints.password],
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _passwordSignIn(),
+                      decoration: InputDecoration(
+                        hintText: 'Password',
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        suffixIcon: IconButton(
+                          tooltip: _showPassword ? 'Hide password' : 'Show password',
+                          icon: Icon(_showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                          onPressed: () => setState(() => _showPassword = !_showPassword),
+                        ),
+                      ),
+                      validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: busy
+                            ? null
+                            : () {
+                                final u = _username.text.trim();
+                                context.push(
+                                  u.contains('@')
+                                      ? '/forgot-password?email=${Uri.encodeQueryComponent(u)}'
+                                      : '/forgot-password',
+                                );
+                              },
+                        child: const Text('Forgot password?'),
                       ),
                     ),
-                  ],
-                  const SizedBox(height: 40),
-                  if (GoogleAuth.configured) ...[
-                    FilledButton.icon(
-                      onPressed: busy ? null : _google,
-                      onLongPress: busy ? null : _googleBrowser, // escape hatch if the sheet misbehaves
-                      icon: _busy == _Busy.google
+                    const SizedBox(height: 4),
+                    OutlinedButton(
+                      onPressed: busy ? null : _passwordSignIn,
+                      child: _busy == _Busy.password
                           ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.4))
-                          : const _GoogleG(),
-                      label: const Text('Continue with Google'),
+                          : const Text('Sign in'),
                     ),
-                    const SizedBox(height: 24),
-                    Row(children: [
-                      const Expanded(child: Divider()),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Text('or with your username', style: TextStyle(color: cs.onSurfaceVariant)),
-                      ),
-                      const Expanded(child: Divider()),
-                    ]),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('New here?', style: TextStyle(color: cs.onSurfaceVariant)),
+                        TextButton(
+                          onPressed: busy ? null : () => context.push('/register'),
+                          child: const Text('Create an account'),
+                        ),
+                      ],
+                    ),
                   ],
-                  TextFormField(
-                    controller: _username,
-                    enabled: !busy,
-                    autofillHints: const [AutofillHints.username],
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(hintText: 'Username', prefixIcon: Icon(Icons.alternate_email)),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your username' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _password,
-                    enabled: !busy,
-                    obscureText: !_showPassword,
-                    autofillHints: const [AutofillHints.password],
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _passwordSignIn(),
-                    decoration: InputDecoration(
-                      hintText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline_rounded),
-                      suffixIcon: IconButton(
-                        tooltip: _showPassword ? 'Hide password' : 'Show password',
-                        icon: Icon(_showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                        onPressed: () => setState(() => _showPassword = !_showPassword),
-                      ),
-                    ),
-                    validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
-                  ),
-                  const SizedBox(height: 20),
-                  OutlinedButton(
-                    onPressed: busy ? null : _passwordSignIn,
-                    child: _busy == _Busy.password
-                        ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.4))
-                        : const Text('Sign in'),
-                  ),
-                  const SizedBox(height: 28),
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text('New here?', style: TextStyle(color: cs.onSurfaceVariant)),
-                    TextButton(onPressed: busy ? null : () => context.push('/register'), child: const Text('Create an account')),
-                  ]),
-                ]),
+                ),
               ),
             ),
           ),
@@ -165,10 +203,13 @@ class _GoogleG extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: 22,
-        height: 22,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-        child: const Text('G', style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.w900, fontSize: 14)),
-      );
+    width: 22,
+    height: 22,
+    alignment: Alignment.center,
+    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+    child: const Text(
+      'G',
+      style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.w900, fontSize: 14),
+    ),
+  );
 }

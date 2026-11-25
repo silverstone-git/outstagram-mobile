@@ -1,19 +1,29 @@
 # TODO: Outstagram mobile
 
 Ordered roughly by priority. Each item says *what*, *why*, and *how* so a fresh session can pick it up.
-Tick items off here (and in `AGENTS.md` §1) when done. Last updated: 2026-11-24.
+Tick items off here (and in `AGENTS.md` §1) when done. Last updated: 2026-11-25.
 
 ## 0. Verify right now (quick)
 
 - [x] **Google sign-in on device (prod flavor).** Works (2026-11-24): Web client as `serverClientId`, Android
       OAuth client with the debug SHA-1 (`docs/auth.md` §5).
-- [ ] **OAuth consent screen**: published, or friends added as test users (`docs/auth.md` §5).
+- [x] **OAuth consent screen**: published (External) and brand-verified by the user, 2026-11-25.
+- [ ] **Supabase email templates**: Magic Link + Confirm signup must contain `{{ .Token }}`, OTP length 6, on **both**
+      projects (`docs/auth.md` §6). Email codes, password reset and confirming emails all depend on it.
+- [ ] **On-device QA of email + streak** (prod): register → confirm step (code arrives, "Do it later" → badge on profile,
+      composer banner, posting → sheet), email-code sign-in with a new address, forgot password, change email; pop quiz →
+      celebration → "Remind me" → permission → a reminder fires (set the time a few minutes ahead on `/streak`).
 - [ ] **Supabase Redirect URLs** for the browser fallback (`docs/auth.md` §4).
 - [ ] **Clean prod test data before release:** QA account `qa_tester1` (user_id 7, created 2026-11-24 by Claude for adb QA).
 - [ ] **On-device QA of P2**: feed/explore, like/double-tap, comments, search → follow → approve (two accounts),
       post with 1 and several photos, text-only post, delete, profile counts, theme toggle, sign-out/in.
 
-## 1. Email sign-in with a 6-digit code (+ custom SMTP)  ← requested
+## 1. Email sign-in with a 6-digit code (+ custom SMTP) ✅ built 2026-11-25
+
+Done as planned below, plus password reset, confirm email (with a gate on posting/uploads/tutor) and change email;
+see `docs/auth.md` §6 and `docs/api.md` → Auth. The web got the same (login: email code / forgot password; confirm banner).
+Still open: the Supabase template step in §0; setting a password from the profile for Google-only accounts can use
+"Change password" (reset flow) already. The original plan, kept for reference:
 
 **Why:** friends without Google, or who don't want passwords. A code beats a magic link on mobile: no deep links,
 the link can't open in the wrong browser or app, and Android can autofill the code from the notification. The same
@@ -147,13 +157,19 @@ Done 2026-11-24 (verified on the S22, prod):
 - [x] **Launcher shortcuts:** New post, Practice exam, AI tutor (long-press the icon). Cold start goes to the route.
 
 Next, needs the user:
-- [ ] **Push notifications (FCM):** needs a Firebase project linked to GCP `top-athlete-472606-v4` and the two Android
+- [ ] ~~**Push notifications (FCM):**~~ dropped for now (user, 2026-11-25: no Firebase). Original notes: needs a Firebase project linked to GCP `top-athlete-472606-v4` and the two Android
       apps registered (`com.cyto.outstagram`, `.staging`) → `google-services.json` per flavor. Then server: `POST /me/devices`,
       a `devicetoken` table (re-run supabase-lockdown.sql), sends on follow request/approval/like/comment via FCM HTTP v1
       (service account on Cloud Run); app: `firebase_messaging`, notification permission (Android 13+), tap → deep link.
 - [ ] **App Links** for post/profile URLs: `https://aryan.cfd/.well-known/assetlinks.json` at the **domain root** (portfolio
       server, not this repo) with the signing SHA-256; post detail route `/p/:id` first (`docs/TODO.md` §6).
-- [ ] Local notifications: "5 minutes left" when leaving a running exam; "your tutor is back" when the quota resets.
+- [x] **Daily streak** (2026-11-25): any finished exam with an answer counts the day (user's time zone); 5-question
+      pop quizzes from the chosen subject; streak screen (flame, week strip, 6-week calendar, milestones, 250-day reward
+      card), chips in the Feed/Exams app bars, full-screen celebration with confetti; local reminders at the chosen time,
+      21:30 and 23:00 on at-risk days, come-back messages after. 250 days = 60 AI prompts/hour + 1000 saved chats for good.
+- [ ] Streak ideas for later: streak freeze (skip one day), friends' streaks on profiles, a home-screen widget.
+- [ ] Local notifications: "5 minutes left" when leaving a running exam; "your tutor is back" when the quota resets
+      (flutter_local_notifications is in now; reuse `StreakReminders`' plugin instance).
 - [ ] Offline exam packs, home-screen widget, video posts in share-target.
 
 ## 8. P7: Release to Play
