@@ -16,9 +16,10 @@ import '../feed/models.dart';
 import '../feed/post_list.dart';
 import '../feed/social_api.dart';
 
-final profileProvider = FutureProvider.autoDispose.family<Profile, String>(
-  (ref, username) => ref.watch(socialApiProvider).profile(username),
-);
+final profileProvider = FutureProvider.autoDispose.family<Profile, String>((ref, username) {
+  ref.watch(postsVersionProvider); // a new or deleted post changes the counts
+  return ref.watch(socialApiProvider).profile(username);
+});
 
 /// `GET /me/stats` (counted server-side).
 final myStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
