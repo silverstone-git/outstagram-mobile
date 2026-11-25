@@ -32,7 +32,7 @@ Free/Pro/Contributor plans, friends' APK link).
 - Don't commit `.env`, `client_secret_*.json`, keystores or `key.properties` (all git-ignored). `config/*.json` must only ever hold **public** values; they end up inside the APK.
 - Don't print or paste secrets: the workspace root holds `env.supabase.txt`, `.env.outstagram*` and `env.razorpay.txt` with real DB passwords and keys. Read them inside scripts only, never `cat` them.
 - Don't push to `silverstone-git/outstagram-app`. It's the user's **old public** Kotlin/Compose app (Feb 2025). This app lives in **`silverstone-git/outstagram-mobile`** (private).
-- Don't use the Desktop OAuth client (`595282356777-41rf…`, the `client_secret_*.json` / `.env` value) anywhere. The app's `serverClientId` is the **Web** client (`docs/auth.md`).
+- Don't use the Desktop OAuth client (the `client_secret_*.json` / `.env` value) anywhere. The app's `serverClientId` is the **Web** client (`docs/auth.md`).
 - Don't add a Razorpay checkout to a Play Store build. Razorpay **test mode** is fine for sideloaded test APKs; Google Play Billing must replace it before a Play release (user decision, `docs/TODO.md`).
 - Don't add iOS work. It's out of scope until the user has an Apple device.
 
@@ -173,12 +173,12 @@ flutter build apk --debug   --flavor staging --dart-define-from-file=config/stag
 # -> build/app/outputs/flutter-apk/app-<flavor>-<mode>.apk
 ```
 
-Host specifics (Windows, user `karti`):
-- `adb` is `~/dev/platform-tools/adb.exe` (Git Bash) / `C:\Users\karti\dev\platform-tools\adb.exe`. The user's phone is a
-  Samsung S22 (`SM S901E`, Android 16) on **wireless** adb: `adb-R5CT31BJ23N-qLOs5E._adb-tls-connect._tcp`.
-  **Ask before driving the phone's UI.** The user may be using it. `adb install -r` without launching is fine.
-- `gh` is at `C:\Program Files\GitHub CLI\gh.exe`. It is **not** on Git Bash's PATH; call it by full path (PowerShell `& $gh …`).
-- `gcloud` is logged in (`top-athlete-472606-v4`). No local Postgres/Docker; server tests run in GitHub Actions.
+Host specifics (Windows): device ids, tool paths, cloud project ids and the QA account live in `../LOCAL.md`
+(workspace root, not in git). Read it before driving the phone or the cloud.
+- The user's phone is an Android 16 Samsung on wireless or USB adb. **Ask before driving the phone's UI.** The user may
+  be using it. `adb install -r` without launching is fine.
+- `gh` is **not** on Git Bash's PATH; call it by full path (PowerShell `& $gh …`).
+- `gcloud` is logged in. No local Postgres/Docker; server tests run in GitHub Actions.
 - Python for scripts: `python` (3.14). `psycopg2-binary` is installed for one-off DB scripts.
 
 ---

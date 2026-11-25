@@ -38,7 +38,7 @@ How to test a build on the user's phone, and what past QA sessions taught us. He
   domain's reputation).
 - **A reminder actually firing:** reminders are inexact (Android may deliver up to ~1 h late). Verify the plan with
   `qa.sh alarms` instead; to see one fire, set "Remind me at" a few minutes ahead on a day the quiz isn't done.
-- To test features behind a confirmed email on the QA account, set `email_verified_at` on `qa_tester1` with SQL
+- To test features behind a confirmed email on the QA account, set `email_verified_at` on the QA account (`../LOCAL.md`) with SQL
   (it's an `@example.com` address). Only with the user's DB permission.
 
 ## 4. Lessons from past sessions

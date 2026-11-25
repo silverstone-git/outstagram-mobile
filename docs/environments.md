@@ -8,7 +8,7 @@
 | Launcher name | Outstagram β | Outstagram |
 | Config | `config/staging.json` | `config/prod.json` |
 | API | `outsie-staging` (Cloud Run) | `outsie` via `https://outsie.aryan.cfd` |
-| Database | Supabase project `outsie-staging` (ref `lopedbgspeddbyoolamo`, Tokyo) | Supabase project `outsie` (ref `naovuyiqqosopuihctbk`, Tokyo) |
+| Database | Supabase project `outsie-staging` (Tokyo) | Supabase project `outsie` (Tokyo) |
 | Browser-auth callback | `com.cyto.outstagram.staging://auth-callback` | `com.cyto.outstagram://auth-callback` |
 
 Both flavors install side by side. `config/*.json` keys (all **public**): `FLAVOR`, `API_BASE`, `WEB_BASE`,
@@ -91,9 +91,9 @@ Because CI build numbers start at 1001, a local build (`+1`) is a "downgrade": i
 
 ## Devices
 
-User's phone: Samsung S22 `SM S901E`, Android 16, wireless adb id `adb-R5CT31BJ23N-qLOs5E._adb-tls-connect._tcp`.
+User's phone: an Android 16 Samsung; its adb ids (wireless and USB) are in `../LOCAL.md`.
 `adb -s <id> install -r <apk>` is safe. **Don't launch or tap** without asking; the user may be using the phone.
-Screenshot: `adb -s <id> exec-out screencap -p > shot.png`. The phone may also be on **USB** (`R5CT31BJ23N`).
+Screenshot: `adb -s <id> exec-out screencap -p > shot.png`. The phone may also be on **USB**.
 The QA loop, its rules and helpers are in `docs/qa.md` / `tool/qa/qa.sh`.
 
 Database access: the auto-mode sandbox refuses direct connections to the prod/staging Postgres unless the user

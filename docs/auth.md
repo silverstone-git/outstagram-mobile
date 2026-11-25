@@ -83,19 +83,19 @@ per flavor in `build.gradle.kts`). The `code` goes to `POST /auth/supabase`.
 
 **Requires** these URLs in Supabase → Authentication → URL Configuration → Redirect URLs, otherwise Supabase
 redirects to the web Site URL and the app never gets the code:
-- prod project (`naovuyiqqosopuihctbk`): `com.cyto.outstagram://auth-callback`
-- staging project (`lopedbgspeddbyoolamo`): `com.cyto.outstagram.staging://auth-callback`
+- prod project (`outsie`): `com.cyto.outstagram://auth-callback`
+- staging project (`outsie-staging`): `com.cyto.outstagram.staging://auth-callback`
 
 As of 2026-11-24 it's **unverified** whether these were added. Check them before relying on the fallback.
 
 ## 5. Google Cloud + Supabase configuration
 
-GCP project `top-athlete-472606-v4` (project number `595282356777`):
+The outsie GCP project (id and number in `../LOCAL.md`):
 
 | OAuth client | Type | ID | Used by |
 |---|---|---|---|
 | Web client | Web application | `595282356777-ppkjuihespj58af8htp4nivg2ife0dbk.apps.googleusercontent.com` | Supabase Google provider (both projects) **and** the app's `serverClientId` (`GOOGLE_SERVER_CLIENT_ID` in `config/*.json`). Verified on device 2026-11-24 |
-| Desktop client | Desktop ("installed") | `595282356777-41rf7a12nidjqsuh7t6jh9g10lbaucbu…` | **Nothing.** It's in `.env` / `client_secret_*.json` from early setup; not needed |
+| Desktop client | Desktop ("installed") | (in `../LOCAL.md`) | **Nothing.** It's in `.env` / `client_secret_*.json` from early setup; not needed |
 | Android client(s) | Android | (no secret) | Lets Google issue tokens to the app: package + SHA-1 |
 
 The Web client ID was confirmed by reading the `client_id` that Supabase's `/auth/v1/authorize?provider=google`
