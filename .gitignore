@@ -52,3 +52,4 @@ client_secret_*.json
 *.keystore
 key.properties
 android/local.properties
+test/screenshots/out/
