@@ -225,12 +225,18 @@ app icon and splash done 2026-11-24 (vector, from the new logo kit); Play needs 
 
 ## 9. Housekeeping
 
-- **Flutter 3.47 migration:** 3.47 deprecates `package:flutter/material.dart` in favour of `package:material_ui/material_ui.dart`,
+**Next plan (web parity + video compression): `docs/next-plan.md`.**
+
+- [ ] **Flutter 3.47 migration:** 3.47 deprecates `package:flutter/material.dart` in favour of `package:material_ui/material_ui.dart`,
   which fails `flutter analyze` on every file. CI is pinned to 3.44.8 (`.github/workflows/ci.yml`) to match the local SDK.
   Upgrade locally, switch the imports, then bump the pin.
 
-- Delete unused platform folders (`ios/ linux/ macos/ windows/ web/`) or keep them deliberately.
-- Remove `build_runner` from dev deps if codegen is never adopted.
+- [ ] Delete unused platform folders `linux/ macos/ windows/ web/` (keep `ios/` for later). Their generated plugin
+      registrants show as modified after every `pub get`. Claude's attempt on 2026-11-25 was blocked by the sandbox;
+      do it by hand: `git rm -r linux macos windows web`.
+- [x] `build_runner` removed from dev deps (2026-11-25).
+- [x] `core.filemode=false` in every workspace repo (2026-11-25): Windows can't store the executable bit, so git
+      showed phantom mode changes on `.sh` files (one slipped into outstagram-server `3c29972`, fixed in PR #13).
 - [x] CI job `publish-apk` (2026-11-25): pushes to `main` build the prod APK and **replace** `apps/outstagram.apk`
       in the public `pariksha` bucket (one object, overwritten). Needs the secrets in `docs/environments.md` → "Friends' APK link".
 - [x] Friends' APK: `https://outsiebucket.aryan.cfd/apps/outstagram.apk` (+ `outstagram.json`: build/commit/date), replaced by

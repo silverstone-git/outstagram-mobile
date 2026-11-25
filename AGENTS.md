@@ -186,7 +186,7 @@ Host specifics (Windows, user `karti`):
 ## 4. Architecture rules
 
 - **State:** Riverpod 3 *without* codegen (`Provider`, `FutureProvider.autoDispose`, `NotifierProvider`, `AsyncNotifierProvider`).
-  `build_runner` is in dev deps for later (freezed/drift), but nothing is generated today.
+  No codegen (`build_runner` was removed 2026-11-25; add it back with freezed/drift if ever needed).
 - **Navigation:** go_router. Auth gating lives only in `router.dart`'s `redirect` (listens to `authControllerProvider`).
   Screens never navigate on sign-in or sign-out themselves. Changing auth state is enough.
 - **Networking:** `apiProvider` (`Api`) for app calls: `get/post/put/delete<T>` return decoded JSON and throw `ApiException`.
