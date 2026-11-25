@@ -69,14 +69,17 @@ class StreakReminders {
   );
 
   /// One notification at [when] (ids outside the streak range, e.g. [ExamAlerts] / [TutorAlerts]).
-  /// Skipped when notifications are off. Exact if Android allows it, else inexact (may come late).
-  Future<void> alertAt(int id, DateTime when, {required String title, required String body, required String route}) async {
+  /// Skipped when notifications are off. Exact if Android allows it, else inexact (may come late), unless
+  /// [exactOnly]: then it's skipped too (a late "5 minutes left" would arrive after the exam ended).
+  Future<void> alertAt(int id, DateTime when,
+      {required String title, required String body, required String route, bool exactOnly = false}) async {
     if (!_ready || !when.isAfter(DateTime.now().add(const Duration(seconds: 30)))) return;
     try {
       final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       if (!(await android?.areNotificationsEnabled() ?? false)) return;
       await android?.createNotificationChannel(_alerts);
       final exact = await android?.canScheduleExactNotifications() ?? false;
+      if (exactOnly && !exact) return;
       await _plugin.zonedSchedule(
         id: id,
         scheduledDate: tz.TZDateTime.from(when, tz.local),

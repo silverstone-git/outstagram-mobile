@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'rooted.dart';
+
 import '../core/auth/auth_controller.dart';
 import '../core/auth/session.dart';
 import '../features/account/account_screen.dart';
@@ -92,7 +94,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/verify-email',
         builder: (_, s) => VerifyEmailScreen(onboarding: s.uri.queryParameters['onboarding'] == '1'),
       ),
-      GoRoute(path: '/account', builder: (_, _) => const AccountScreen()),
+      GoRoute(
+        path: '/account',
+        builder: (_, s) => Rooted(location: s.uri.toString(), child: const AccountScreen()),
+      ),
       GoRoute(path: '/account/email', builder: (_, _) => const ChangeEmailScreen()),
       GoRoute(
         path: '/account/password',
@@ -100,12 +105,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/streak',
-        builder: (_, s) => StreakScreen(startQuiz: s.uri.queryParameters['quiz'] == '1'),
+        builder: (_, s) => Rooted(
+          location: s.uri.toString(),
+          child: StreakScreen(startQuiz: s.uri.queryParameters['quiz'] == '1'),
+        ),
       ),
-      GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
+      GoRoute(
+        path: '/search',
+        builder: (_, s) => Rooted(location: s.uri.toString(), child: const SearchScreen()),
+      ),
       GoRoute(
         path: '/u/:username',
-        builder: (_, s) => UserProfileScreen(username: s.pathParameters['username']!),
+        builder: (_, s) => Rooted(
+          location: s.uri.toString(),
+          child: UserProfileScreen(username: s.pathParameters['username']!),
+        ),
         routes: [
           GoRoute(
             path: 'followers',
@@ -117,13 +131,25 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      GoRoute(path: '/p/:id', builder: (_, s) => PostDetailScreen(postId: s.pathParameters['id']!)),
+      GoRoute(
+        path: '/p/:id',
+        builder: (_, s) => Rooted(
+          location: s.uri.toString(),
+          child: PostDetailScreen(postId: s.pathParameters['id']!),
+        ),
+      ),
       // App Links (https://aryan.cfd/outstagram/p/?id=… and /u/?name=…, the web's share links) arrive with
       // that path; map them onto the app's own routes.
       GoRoute(path: '/outstagram/p', redirect: (_, s) => appLinkTarget(s.uri)),
       GoRoute(path: '/outstagram/u', redirect: (_, s) => appLinkTarget(s.uri)),
-      GoRoute(path: '/profile/edit', builder: (_, _) => const EditProfileScreen()),
-      GoRoute(path: '/exams/offline', builder: (_, _) => const OfflinePacksScreen()),
+      GoRoute(
+        path: '/profile/edit',
+        builder: (_, s) => Rooted(location: s.uri.toString(), child: const EditProfileScreen()),
+      ),
+      GoRoute(
+        path: '/exams/offline',
+        builder: (_, s) => Rooted(location: s.uri.toString(), child: const OfflinePacksScreen()),
+      ),
       // Exams run full-screen, outside the tab shell.
       GoRoute(path: '/exam/run', builder: (_, _) => const ExamRunnerScreen()),
       GoRoute(
@@ -134,15 +160,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/exam/attempt/:id',
-        builder: (_, s) => AttemptScreen(attemptId: s.pathParameters['id']!),
+        builder: (_, s) => Rooted(
+          location: s.uri.toString(),
+          child: AttemptScreen(attemptId: s.pathParameters['id']!),
+        ),
       ),
-      GoRoute(path: '/tutor', builder: (_, _) => const TutorLibraryScreen()),
+      GoRoute(
+        path: '/tutor',
+        builder: (_, s) => Rooted(location: s.uri.toString(), child: const TutorLibraryScreen()),
+      ),
       GoRoute(
         path: '/tutor/:attemptId/:questionId',
-        builder: (_, s) => TutorChatScreen(
-          attemptId: s.pathParameters['attemptId']!,
-          questionId: s.pathParameters['questionId']!,
-          question: s.extra is TutorQuestion ? s.extra! as TutorQuestion : null,
+        builder: (_, s) => Rooted(
+          location: s.uri.toString(),
+          child: TutorChatScreen(
+            attemptId: s.pathParameters['attemptId']!,
+            questionId: s.pathParameters['questionId']!,
+            question: s.extra is TutorQuestion ? s.extra! as TutorQuestion : null,
+          ),
         ),
       ),
       StatefulShellRoute.indexedStack(

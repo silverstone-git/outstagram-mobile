@@ -283,6 +283,16 @@ Host specifics (Windows, user `karti`):
     written file (it broke Dart strings and a YAML block twice). Write edit scripts with the Write tool, or use `chr(10)`.
 36. **Buckets:** `pariksha` is public (`https://outsiebucket.aryan.cfd`: question images, the APK); `outstagram` is
     private user media (presigned links only). Don't make user media public.
+37. **CI signing:** AGP on the GitHub runner ignored `~/.android/debug.keystore` and signed each APK with a new
+    random key (builds 1038/1041 couldn't update anything). `build.gradle.kts` names the keystore explicitly
+    (`OUTSTAGRAM_KEYSTORE` on CI), and `publish-apk` refuses to upload unless `apksigner` shows SHA-256 `E3:6F…5E:59`.
+38. **Pages opened from outside the app** (App Link, widget, shortcut, notification) are the only route on the stack.
+    Wrap top-level detail routes in `Rooted` (`lib/app/rooted.dart`): it puts `/feed` underneath and pushes the page
+    again, so there's a back arrow and BACK goes to the tabs. Exams and sign-in routes don't use it.
+39. **No `PopScope(canPop: false)` in modal sheets** to return a result: after a dialog opened on top, BACK skipped it
+    and closed the app. Pass a `ValueNotifier` instead (`showCommentsSheet`).
+40. **Exam alerts without the exact-alarm permission** can arrive ~20 min late, so "5 minutes left" is only scheduled
+    when exact alarms are allowed (`alertAt(exactOnly: true)`); "Time's up" is always scheduled.
 
 ---
 

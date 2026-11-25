@@ -9,6 +9,7 @@ import '../account/account_api.dart';
 import 'follow_list_screen.dart' show confirmUnfollow;
 import 'profile_photo.dart';
 import '../streak/streak_visuals.dart' show StreakBadge;
+import '../streak/streak_api.dart' show streakProvider;
 import '../account/account_screen.dart';
 import '../../core/net/api_error.dart';
 import '../../core/ui/avatar.dart';
@@ -24,9 +25,13 @@ final profileProvider = FutureProvider.autoDispose.family<Profile, String>((ref,
 });
 
 /// `GET /me/stats` (counted server-side).
-final myStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
-  (ref) => ref.watch(apiProvider).get<Map<String, dynamic>>('/me/stats'),
-);
+final myStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) {
+  // recount after a post is added/deleted and after exam attempts land (they update the streak, also
+  // when attempts made offline upload later)
+  ref.watch(postsVersionProvider);
+  ref.watch(streakProvider);
+  return ref.watch(apiProvider).get<Map<String, dynamic>>('/me/stats');
+});
 
 /// Profile header + that user's posts. Used for your own tab and for anyone else.
 class ProfileView extends ConsumerWidget {

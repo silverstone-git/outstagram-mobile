@@ -1,3 +1,4 @@
+import '../compose/compose_screen.dart' show postsVersionProvider;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -84,7 +85,11 @@ class _PostCardState extends ConsumerState<PostCard> with SingleTickerProviderSt
         content: const Text('This removes it for everyone.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Delete')),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(c).colorScheme.error),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -93,6 +98,7 @@ class _PostCardState extends ConsumerState<PostCard> with SingleTickerProviderSt
       await ref.read(socialApiProvider).deletePost(p.id);
       widget.onDeleted?.call();
       ref.invalidate(profileProvider(p.author)); // the post count
+      ref.read(postsVersionProvider.notifier).bump(); // Home still listed it until a pull-to-refresh
     } catch (e) {
       if (mounted) showError(context, e);
     }

@@ -11,20 +11,28 @@ import 'social_api.dart';
 
 /// Returns the change in the comment count (added minus deleted).
 Future<int> showCommentsSheet(BuildContext context, Post post) async {
-  final added = await showModalBottomSheet<int>(
+  // The count travels in a notifier, not the pop result: a PopScope(canPop: false) here stopped catching
+  // BACK after the delete dialog had been open, so BACK closed the whole app (QA 2026-11-25).
+  final delta = ValueNotifier<int>(0);
+  await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (_) => _CommentsSheet(post: post),
+    builder: (_) => _CommentsSheet(post: post, delta: delta),
   );
-  return added ?? 0;
+  final n = delta.value;
+  delta.dispose();
+  return n;
 }
 
 class _CommentsSheet extends ConsumerStatefulWidget {
-  const _CommentsSheet({required this.post});
+  const _CommentsSheet({required this.post, required this.delta});
 
   final Post post;
+
+  /// Comments added minus deleted while the sheet is open.
+  final ValueNotifier<int> delta;
 
   @override
   ConsumerState<_CommentsSheet> createState() => _CommentsSheetState();
@@ -120,11 +128,8 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
     final cs = Theme.of(context).colorScheme;
     final me = ref.watch(authControllerProvider).value?.user.username;
     final myPost = me == widget.post.author;
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) Navigator.of(context).pop(_added);
-      },
+    widget.delta.value = _added;
+    return KeyedSubtree(
       child: Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
         child: SizedBox(
@@ -156,7 +161,7 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                           onLongPress: canDelete ? () => _delete(c) : null,
                           leading: GestureDetector(
                             onTap: () {
-                              Navigator.of(context).pop(_added);
+                              Navigator.of(context).pop();
                               context.push('/u/${c.author}');
                             },
                             child: Avatar(name: c.author, url: c.authorAvatar, radius: 16),

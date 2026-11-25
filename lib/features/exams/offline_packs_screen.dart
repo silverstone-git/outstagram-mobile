@@ -151,7 +151,7 @@ class _PackTile extends StatelessWidget {
       subtitle: progress != null
           ? Padding(padding: const EdgeInsets.only(top: 6), child: LinearProgressIndicator(value: progress))
           : Text(p == null
-              ? '$topics topics'
+              ? '$topics topic${topics == 1 ? '' : 's'}'
               : '${p.questions} questions · ${fmtBytes(p.bytes)} · saved ${_ago(p.savedAt)}'),
       trailing: progress != null
           ? null
