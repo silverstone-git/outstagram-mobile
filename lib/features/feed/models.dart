@@ -104,18 +104,31 @@ class Comment {
 }
 
 class UserSummary {
-  const UserSummary({required this.username, required this.fullname, this.bio, this.avatar});
+  const UserSummary({
+    required this.username,
+    required this.fullname,
+    this.bio,
+    this.avatar,
+    this.youFollow = 0,
+    this.isYou = false,
+  });
 
   final String username;
   final String fullname;
   final String? bio;
   final String? avatar;
 
+  /// Follower/following lists only: 0 none, 0.5 requested, 1 following.
+  final double youFollow;
+  final bool isYou;
+
   factory UserSummary.fromJson(Map<String, dynamic> j) => UserSummary(
         username: j['username'] as String,
         fullname: j['fullname'] as String,
         bio: j['bio'] as String?,
         avatar: j['avatar_url'] as String?,
+        youFollow: (j['you_follow_them'] as num?)?.toDouble() ?? 0,
+        isYou: j['is_you'] == true,
       );
 }
 

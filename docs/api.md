@@ -59,7 +59,14 @@ See `docs/auth.md`. `POST /login` is **form-encoded** (the `username` field also
 | `GET /users/{username}` | `{user_id, username, fullname, bio, posts_count, followers_count, following_count, you_follow_them, they_follow_you}` | n/a |
 | `POST /users/{username}/follow` | creates a **pending** request; 400 if already pending/following or yourself | n/a |
 | `GET /follow-requests` | pending requests **to** you: `[{request_id, requester_user_id, requester_username, datetime_requested, status, …}]` | n/a |
-| `POST /request-approve/{request_id}` | accept | n/a |
+| `POST /request-approve/{request_id}` | accept (also the second half of a mutual follow; that used to 400 "Friendship already exists" before outstagram-server PR #9) | n/a |
+| `POST /request-reject/{request_id}` | decline (204); the row is deleted so they can ask again | n/a |
+| `DELETE /users/{username}/follow` | unfollow **or** cancel a pending request (204; 404 if nothing to undo) | n/a |
+| `DELETE /me/followers/{username}` | remove a follower (204) | n/a |
+| `GET /users/{u}/followers/{page}` / `GET /users/{u}/following/{page}` | `[{user_id, username, fullname, bio, avatar_url, you_follow_them, is_you}]`, newest first | 30 |
+| `PUT /me` | `{fullname?, bio?}` (omitted = unchanged, `""` clears bio; name 1–60, bio ≤160 → 422) → `GET /me` body | n/a |
+| `DELETE /posts/{post_id}/comments/{comment_id}` | comment author or post author (204/403/404) | n/a |
+| `GET /posts/{id}` | one **Post** (same shape as listings, counts included); 404 if deleted | n/a |
 | `GET /me/stats` | `{posts, posts_this_week, achievements, …, followers, following, exams_taken, avg_accuracy, best_score_pct, …}` | n/a |
 | `GET /trending?days=30` | `[{tag, posts}]` | n/a |
 
@@ -75,8 +82,9 @@ Quirks:
 - `you_follow_them` / `they_follow_you`: `0` none, `0.5` pending, `1` accepted (floats).
 - `post_category` filter accepts the label (`Exam Result`) or the slug (`exam_result`); invalid → 400.
   Labels: Technology, Entertainment, Business, Vlog, Lifestyle, Academic, Achievement, Study Group, Exam Result, Project.
-- **Missing on the server** (not built yet): unfollow, reject a request, followers/following lists, edit profile,
-  profile photos, notifications. See `docs/TODO.md`.
+- A follow **is** an accepted `FollowRequest` (directed). `Friendship` is a legacy per-pair summary the server keeps in sync.
+- `POST /posts/{id}/comment` returns `comment_id`; the app keeps it so a fresh comment can be deleted at once.
+- Still missing: notifications (no push, user decision), "liked by" UI.
 
 ## Media
 

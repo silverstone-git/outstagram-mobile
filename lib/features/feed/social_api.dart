@@ -45,8 +45,19 @@ class SocialApi {
           Comment.fromJson(c as Map<String, dynamic>),
       ];
 
-  Future<void> addComment(String postId, String content) =>
-      _api.post<dynamic>('/posts/$postId/comment', data: {'content': content});
+  /// Returns the new comment's id (so it can be deleted right away).
+  Future<int?> addComment(String postId, String content) async {
+    final r = await _api.post<dynamic>('/posts/$postId/comment', data: {'content': content});
+    return r is Map ? r['comment_id'] as int? : null;
+  }
+
+  /// The comment's author or the post's author.
+  Future<void> deleteComment(String postId, int commentId) =>
+      _api.delete<dynamic>('/posts/$postId/comments/$commentId');
+
+  /// One post (counts included), e.g. from a shared link.
+  Future<Post> post(String postId) async =>
+      Post.fromJson(await _api.get<Map<String, dynamic>>('/posts/${Uri.encodeComponent(postId)}'));
 
   Future<List<UserSummary>> searchUsers(String q) async => [
         for (final u in await _api.get<List<dynamic>>('/users/search', query: {'q': q}))
@@ -64,6 +75,26 @@ class SocialApi {
       ];
 
   Future<void> approve(int requestId) => _api.post<dynamic>('/request-approve/$requestId');
+
+  /// Decline a request addressed to you (they can ask again later).
+  Future<void> reject(int requestId) => _api.post<dynamic>('/request-reject/$requestId');
+
+  /// Unfollow, or cancel a pending request.
+  Future<void> unfollow(String username) => _api.delete<dynamic>('/users/${Uri.encodeComponent(username)}/follow');
+
+  /// Make someone stop following you.
+  Future<void> removeFollower(String username) =>
+      _api.delete<dynamic>('/me/followers/${Uri.encodeComponent(username)}');
+
+  /// `which` is `followers` or `following`; 30 per page.
+  Future<List<UserSummary>> followList(String username, String which, int page) async => [
+        for (final u in await _api.get<List<dynamic>>('/users/${Uri.encodeComponent(username)}/$which/$page'))
+          UserSummary.fromJson(u as Map<String, dynamic>),
+      ];
+
+  /// Edit your name and/or bio ("" clears the bio).
+  Future<void> updateProfile({String? fullname, String? bio}) =>
+      _api.put<dynamic>('/me', data: {'fullname': ?fullname, 'bio': ?bio});
 
   Future<List<String>> trending() async {
     try {

@@ -49,7 +49,7 @@ advantages (see `PLAN.md` §5).
 | P0 Foundation | Flavors, configs, theme, router shell, Dio client, CI | ✅ done |
 | P1 Auth | Password + register, native Google, PKCE browser fallback, refresh tokens | ✅ done (Google sign-in verified on device 2026-11-24: Web client as `serverClientId` + Android client with the debug SHA-1) |
 | P1b Email | 6-digit email codes: sign-in, forgot/change password, confirm email (onboarding step with "Do it later"), change email; posting/uploads/tutor need a confirmed email | ✅ built 2026-11-25 (unit/widget tested; needs the Supabase email templates with `{{ .Token }}`, `docs/auth.md` §6; on-device QA pending) |
-| P2 Social | Feed/Explore, post card, likes, comments, search, profiles, follow requests, composer | ✅ done (needs on-device QA) |
+| P2 Social | Feed/Explore, post card, likes, comments, search, profiles, follow requests, composer; unfollow, decline, follower lists, edit profile, delete comment, post page, zoom, video (2026-11-25) | ✅ done (needs on-device QA) |
 | P3 Exams | Dart port of the Pariksha engine, presets, practice, community exams, runner, results, history | ✅ done 2026-11-24 (verified on device; leftovers in `docs/TODO.md` §3) |
 | P4 AI tutor | SSE streaming, Markdown + LaTeX, skills, quota, library, saved equations, voice input | ✅ built 2026-11-24 (unit/widget tested; on-device QA pending, `docs/TODO.md` §4) |
 | P5 Paywall | 429/402/413 → upgrade sheet, Razorpay test | ✅ built 2026-11-24 (widget tested; prod on Razorpay test keys; payment verified on device 2026-11-24, `docs/TODO.md` §5) |
@@ -98,10 +98,13 @@ lib/
                                  streak_celebration.dart (full-screen "Day N" after an exam), streak_reminders.dart (local notifications + copy)
     shell/                       AppShell (NavigationBar), ComingSoon placeholder
     feed/                        models.dart (Post, Comment, Profile, …), social_api.dart, post_card.dart,
-                                 post_list.dart (infinite + pull-to-refresh), comments_sheet.dart, home_screen.dart
+                                 post_list.dart (infinite + pull-to-refresh), comments_sheet.dart (long-press delete), home_screen.dart,
+                                 post_detail_screen.dart (/p/:id), media_viewer.dart (full-screen pinch zoom, PostVideo)
     social/search_screen.dart    debounced /users/search
     profile/                     profile_view.dart (header + posts, follow button, stats), profile_screen.dart,
-                                 profile_photo.dart (tap your avatar: gallery / camera / remove → PUT|DELETE /me/avatar)
+                                 profile_photo.dart (tap your avatar: gallery / camera / remove → PUT|DELETE /me/avatar),
+                                 follow_list_screen.dart (/u/:u/followers|following, unfollow, remove follower),
+                                 edit_profile_screen.dart (/profile/edit: name, bio → PUT /me)
     activity/activity_screen.dart follow requests + approve
     compose/compose_screen.dart  pick/camera → WebP (plan's media limit) → /media-upload/bulk → /posts; postsVersionProvider
     compose/compose_draft.dart   composeDraftProvider: images/caption/category the composer takes when it opens
@@ -136,11 +139,12 @@ test/tutor_test.dart             SSE decoding, stream errors (429/402/404 bodies
 test/avatar_test.dart            avatar_url parsing in every model, cache key, Avatar widget
 test/email_streak_test.dart      email-code/reset sign-in, register → confirm step, /me + 403 email_unverified, CodeField,
                                  streak parsing, reminder copy, streak widgets
+test/social_basics_test.dart     follow/unfollow/reject/lists/PUT /me/comment delete/post endpoints, edit form, Activity decline
 tool/exam_golden.ts              regenerates the golden fixtures with bun from ../outstagram-web (run after engine.ts changes)
 assets/brand/                    mark.svg (the logo symbol, from ../assets/01-icon-gradient.svg) + the logo kit README
 config/{staging,prod}.json       public build config (dart-define-from-file)
 android/                         Flutter-generated; flavors in app/build.gradle.kts
-.github/workflows/ci.yml         analyze, test, staging APK artifact
+.github/workflows/ci.yml         analyze, test, staging APK artifact; publish-apk (main: prod APK → one fixed R2 object)
 ```
 
 Platform folders `ios/ linux/ macos/ windows/ web/` are the untouched scaffold. They're unused and can be deleted.

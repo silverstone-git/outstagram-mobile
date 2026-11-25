@@ -9,7 +9,7 @@ import '../../core/ui/feedback.dart';
 import 'models.dart';
 import 'social_api.dart';
 
-/// Returns how many comments the user added.
+/// Returns the change in the comment count (added minus deleted).
 Future<int> showCommentsSheet(BuildContext context, Post post) async {
   final added = await showModalBottomSheet<int>(
     context: context,
@@ -74,11 +74,11 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     try {
-      await ref.read(socialApiProvider).addComment(widget.post.id, text);
+      final id = await ref.read(socialApiProvider).addComment(widget.post.id, text);
       HapticFeedback.lightImpact();
       final me = ref.read(authControllerProvider).value!.user.username;
       setState(() {
-        _comments.add(Comment(id: -1, author: me, content: text, at: DateTime.now()));
+        _comments.add(Comment(id: id ?? -1, author: me, content: text, at: DateTime.now()));
         _added++;
         _input.clear();
       });
@@ -89,9 +89,37 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
     }
   }
 
+  /// Long-press: your own comment, or any comment on your post.
+  Future<void> _delete(Comment c) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: const Text('Delete comment?'),
+        content: Text(c.content, maxLines: 3, overflow: TextOverflow.ellipsis),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(d, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await ref.read(socialApiProvider).deleteComment(widget.post.id, c.id);
+      HapticFeedback.mediumImpact();
+      setState(() {
+        _comments.remove(c);
+        _added--;
+      });
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final me = ref.watch(authControllerProvider).value?.user.username;
+    final myPost = me == widget.post.author;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -123,7 +151,9 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                           );
                         }
                         final c = _comments[i];
+                        final canDelete = c.id > 0 && (myPost || c.author == me);
                         return ListTile(
+                          onLongPress: canDelete ? () => _delete(c) : null,
                           leading: GestureDetector(
                             onTap: () {
                               Navigator.of(context).pop(_added);

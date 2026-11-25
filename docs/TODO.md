@@ -74,10 +74,15 @@ and is rate-limited to a few emails per hour, so it's unusable for friends.
 Posts store presigned R2 URLs that **expire after 7 days**, so images on older posts break (web and app).
 **Mitigated 2026-11-24** (outstagram-server PR #3): listings and post view re-sign stored URLs on read. Still worth
 doing for permanent, CDN-cacheable links:
-- Find the bucket's public address: Cloudflare → R2 → bucket `outstagram` → Settings → Public access
-  (an `r2.dev` subdomain, or connect a custom domain such as `media.aryan.cfd`, which is better: cacheable, no rate limits).
-  The question-image bucket the web uses is `https://pub-682f1a94c94443278f61ec7ca3dadaec.r2.dev`; confirm whether
-  it's the same bucket before reusing it.
+- **Found (2026-11-25):** bucket `outstagram` is already public at `https://pub-682f1a94c94443278f61ec7ca3dadaec.r2.dev`
+  (the same domain the web uses for question images). Objects sit under an `outstagram/` prefix because the server's
+  `S3_ENDPOINT` ends in `/outstagram`, so the base is **`https://pub-682f1a94c94443278f61ec7ca3dadaec.r2.dev/outstagram`**
+  (checked: a server-signed URL and `<base>/<key>` return the same image). Python's default user agent gets a 403
+  from r2.dev; browsers/apps are fine. r2.dev is rate-limited and not CDN-cached: a custom domain
+  (`media.aryan.cfd`, Cloudflare → R2 → bucket → Settings → Custom domains) is the better final base.
+- [ ] Set it (blocked for Claude by the sandbox on 2026-11-25; the user runs it):
+  `gcloud run services update outsie-staging --region asia-northeast1 --update-env-vars S3_PUBLIC_BASE_URL=https://pub-682f1a94c94443278f61ec7ca3dadaec.r2.dev/outstagram`
+  then the same for `outsie`.
 - Set `S3_PUBLIC_BASE_URL=<that origin>` on `outsie` and `outsie-staging`
   (`gcloud run services update outsie --region asia-northeast1 --update-env-vars S3_PUBLIC_BASE_URL=…`). The server
   then returns `public_url` and the app already prefers it.
@@ -144,10 +149,16 @@ per-photo limit follows the plan (`limits.media_bytes`). The button is hidden wh
 ## 6. Social gaps (server + app)
 
 - [x] Profile photo (2026-11-25): `PUT/DELETE /me/avatar`, shown on profiles, posts, comments, search, requests (app + web).
-- Server: unfollow (`DELETE /users/{u}/follow`), reject request, followers/following lists, `PUT /me` (fullname, bio), `/posts/{id}` with counts, delete a comment,
-  "liked by" list UI (`/posts/{id}/likes/{page}` exists).
-- App: profile edit screen, followers/following sheets, post detail route `/p/:id` (for share links), video playback
-  (`video_player`; the card shows a placeholder today), image pinch-zoom, share post (`share_plus`).
+- [x] **Mutual-follow bug** (2026-11-25, server PR #9): approving the second half of a mutual follow 400'd
+      "Friendship already exists", so that request stayed pending (qa_tester1 1 follower / 0 following, cyto the
+      reverse). Fixed; the stuck request goes through when it's approved again from Activity.
+- [x] Social basics (2026-11-25; server PR #9, app branch `feat/social-basics`): unfollow / cancel request (tap
+      Following/Requested), Decline on Activity, followers/following lists (tap the counts; Remove on your own
+      followers), Edit profile (name, bio), long-press to delete a comment (yours, or any on your post),
+      `/p/:id` post page + "Share link" / "Open post" in the post ⋮ menu, tap a photo → full-screen pinch/double-tap
+      zoom, video playback (`video_player`, tap to play, muted until unmuted). Needs on-device QA.
+- [ ] Web: same features (unfollow, decline, lists, edit profile, delete comment) and a `/p/<id>` page (also needed for App Links).
+- [ ] "liked by" list UI (`/posts/{id}/likes/{page}` exists).
 
 ## 7. P6: Mobile extras (`PLAN.md` §5)
 
@@ -189,6 +200,8 @@ app icon and splash done 2026-11-24 (vector, from the new logo kit); Play needs 
 
 - Delete unused platform folders (`ios/ linux/ macos/ windows/ web/`) or keep them deliberately.
 - Remove `build_runner` from dev deps if codegen is never adopted.
-- Add a prod-APK artifact (or GitHub Release) job to CI, signed consistently, so friends can download builds.
+- [x] CI job `publish-apk` (2026-11-25): pushes to `main` build the prod APK and **replace** `apps/outstagram.apk`
+      in the R2 bucket (one object, overwritten). Needs the secrets in `docs/environments.md` → "Friends' APK link".
+- [ ] Point the web landing's `APPS.androidApk` (`outstagram-web/src/features/public/routes.ts`, now a Drive link) at the R2 URL.
 - Add the mobile app to the cross-project roadmap in `outstagram-web/TODO.md`.
 - Upgrade plugins that warn about "Built-in Kotlin" when new versions exist (build output lists them).

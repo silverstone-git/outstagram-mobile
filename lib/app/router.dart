@@ -18,6 +18,9 @@ import '../features/exams/exam_runner_screen.dart';
 import '../features/exams/exam_session.dart';
 import '../features/exams/exams_home_screen.dart';
 import '../features/feed/home_screen.dart';
+import '../features/feed/post_detail_screen.dart';
+import '../features/profile/edit_profile_screen.dart';
+import '../features/profile/follow_list_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/social/search_screen.dart';
 import '../features/streak/streak_screen.dart';
@@ -91,7 +94,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/u/:username',
         builder: (_, s) => UserProfileScreen(username: s.pathParameters['username']!),
+        routes: [
+          GoRoute(
+            path: 'followers',
+            builder: (_, s) => FollowListScreen(username: s.pathParameters['username']!, initial: 'followers'),
+          ),
+          GoRoute(
+            path: 'following',
+            builder: (_, s) => FollowListScreen(username: s.pathParameters['username']!, initial: 'following'),
+          ),
+        ],
       ),
+      GoRoute(path: '/p/:id', builder: (_, s) => PostDetailScreen(postId: s.pathParameters['id']!)),
+      GoRoute(path: '/profile/edit', builder: (_, _) => const EditProfileScreen()),
       // Exams run full-screen, outside the tab shell.
       GoRoute(path: '/exam/run', builder: (_, _) => const ExamRunnerScreen()),
       GoRoute(
