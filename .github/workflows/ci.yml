@@ -49,6 +49,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: write # GitHub release
     env:
       HAS_SECRETS: ${{ secrets.ANDROID_SIGNING_KEYSTORE_B64 != '' && secrets.APK_S3_ACCESS_KEY_ID != '' }}
       APK_KEY: ${{ vars.APK_KEY || 'apps/outstagram.apk' }}
@@ -129,3 +131,20 @@ jobs:
           aws s3 cp latest.json "s3://$S3_BUCKET/${APK_KEY%.apk}.json" --endpoint-url "$S3_ENDPOINT" \
             --content-type application/json --cache-control "no-cache"
           echo "::notice::Uploaded build $((1000 + ${{ github.run_number }})) to $APK_KEY"
+      # Every main build also becomes a GitHub release (notes = PRs since the last one). The asset always has
+      # the same name, so https://github.com/<repo>/releases/latest/download/Outstagram.apk is a stable link.
+      - name: GitHub release
+        if: env.HAS_SECRETS == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$((1000 + ${{ github.run_number }}))
+          v=$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+          cp build/app/outputs/flutter-apk/app-prod-release.apk Outstagram.apk
+          {
+            echo "Android APK, signed with the same key as every other build, so it installs over any earlier one."
+            echo "Download **Outstagram.apk** below and open it on your phone (allow installs from your browser if asked)."
+          } > notes.md
+          gh release create "v$v-build.$n" Outstagram.apk \
+            --target "$GITHUB_SHA" --title "Outstagram $v (build $n)" --latest \
+            --notes-file notes.md --generate-notes
