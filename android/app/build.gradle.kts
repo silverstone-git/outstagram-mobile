@@ -47,10 +47,24 @@ android {
         }
     }
 
+    // TODO(P7): upload keystore via key.properties. Until then release builds use the user's debug key, named
+    // by path: on CI, AGP ignored ~/.android/debug.keystore and signed with a fresh random key, so CI APKs
+    // couldn't update each other or a local install (QA 2026-11-25). CI sets OUTSTAGRAM_KEYSTORE.
+    val sharedKeystore = file(
+        System.getenv("OUTSTAGRAM_KEYSTORE") ?: "${System.getProperty("user.home")}/.android/debug.keystore"
+    )
+    signingConfigs {
+        create("shared") {
+            storeFile = sharedKeystore
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
-            // TODO(P7): upload keystore via key.properties. Debug keys for now so release builds run.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (sharedKeystore.exists()) "shared" else "debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

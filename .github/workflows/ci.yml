@@ -77,6 +77,8 @@ jobs:
         run: |
           mkdir -p ~/.android
           echo "${{ secrets.ANDROID_SIGNING_KEYSTORE_B64 }}" | base64 -d > ~/.android/debug.keystore
+          # build.gradle.kts signs release builds with this file explicitly (AGP alone used a random key here)
+          echo "OUTSTAGRAM_KEYSTORE=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
           keytool -list -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey | grep -E "SHA1:" | sed 's/^/signing /'
       # The project's gradle.properties asks for an 8 GB heap (fine locally); on the 16 GB runner Gradle +
       # the Kotlin daemon + R8 got OOM-killed (exit 143). ~/.gradle/gradle.properties overrides it here.
@@ -94,6 +96,16 @@ jobs:
           flutter pub get
           flutter build apk --release --flavor prod --dart-define-from-file=config/prod.json \
             --build-number=$((1000 + ${{ github.run_number }})) --target-platform android-arm,android-arm64
+      # Never publish an APK that can't update the installed app (or breaks Google sign-in / App Links).
+      - name: Check the APK's signing certificate
+        if: env.HAS_SECRETS == 'true'
+        run: |
+          apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$apksigner" verify --print-certs build/app/outputs/flutter-apk/app-prod-release.apk | tee certs.txt
+          grep -qi "SHA-256 digest: $EXPECTED_SHA256" certs.txt || { echo "::error::APK is not signed with the shared key"; exit 1; }
+        env:
+          # public fingerprint of the shared key (also in assetlinks.json); not a secret
+          EXPECTED_SHA256: e36f5aad3c4bea7a32d7e6a2cb6c29477a03cd64f827c99e6dbe689e451e5e59
       - name: Replace the APK in the bucket
         if: env.HAS_SECRETS == 'true'
         env:
