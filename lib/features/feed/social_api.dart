@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -131,6 +132,31 @@ class SocialApi {
     } catch (e) {
       throw ApiException.from(e);
     }
+  }
+
+  /// A video straight to the bucket: `POST /media-upload/video` (the server checks the plan's video limit
+  /// and signs the length), then a streamed PUT from the file. Returns the media entry for the post.
+  Future<Map<String, String>> uploadVideo(String path, int size,
+      {required String mime, void Function(int sent)? onSent}) async {
+    final name = path.split(RegExp(r'[\\/]')).last;
+    final slot = await _api.post<Map<String, dynamic>>('/media-upload/video',
+        data: {'filename': name, 'content_type': mime, 'bytes': size});
+    final headers = {
+      for (final e in Map<String, dynamic>.from(slot['headers'] as Map? ?? const {}).entries) e.key: '${e.value}',
+      Headers.contentLengthHeader: '$size',
+    };
+    try {
+      // A bare Dio: no base URL, no auth header (the URL is presigned).
+      await Dio().put<void>(
+        slot['upload_url'] as String,
+        data: File(path).openRead(),
+        options: Options(headers: headers, sendTimeout: const Duration(minutes: 30)),
+        onSendProgress: (sent, _) => onSent?.call(sent),
+      );
+    } catch (e) {
+      throw ApiException.from(e);
+    }
+    return {'url': slot['url'] as String, 'media_type': 'video'};
   }
 
   Future<void> createPost({

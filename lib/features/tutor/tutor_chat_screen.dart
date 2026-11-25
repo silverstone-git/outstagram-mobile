@@ -128,8 +128,9 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
     final quota = ref.read(tutorQuotaProvider);
     if (quota != null && quota.isOut) {
       setState(() => _error = "You've used all ${quota.limit} AI prompts for this hour.${quota.resetHint}");
-      if (!quota.isPro) {
-        showPaywall(context, code: 'ai_quota', message: "You've used all your AI prompts for this hour.");
+      if (quota.upgradeTo != null) {
+        showPaywall(context, code: 'ai_quota', message: "You've used all your AI prompts for this hour.",
+            needs: quota.upgradeTo);
       } else {
         HapticFeedback.heavyImpact();
       }
@@ -682,8 +683,7 @@ class _Composer extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    '${q.remaining}/${q.limit} AI prompts left this hour${q.isPro ? ' · Pro' : ''}'
-                    '${q.isOut ? '.${q.resetHint}' : ''}',
+                    q.pill,
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 11, color: q.isOut ? cs.error : cs.onSurfaceVariant),
                   ),

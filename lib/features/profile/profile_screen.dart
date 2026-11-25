@@ -47,7 +47,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               PopupMenuItem(
                 value: 'pro',
-                child: ListTile(leading: Icon(Icons.workspace_premium_outlined), title: Text('Outstagram Pro')),
+                child: ListTile(leading: Icon(Icons.workspace_premium_outlined), title: Text('Plans: Pro & Contributor')),
               ),
               PopupMenuItem(
                 value: 'signout',

@@ -53,7 +53,7 @@ abstract final class TutorAlerts {
       _id,
       at,
       title: '✨ Your AI tutor is back',
-      body: 'Your ${q.limit} messages for this hour are ready. Pick up where you left off.',
+      body: 'Your AI messages for this hour are ready again. Pick up where you left off.',
       route: route,
     );
   }
