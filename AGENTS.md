@@ -111,6 +111,8 @@ lib/
     activity/activity_screen.dart follow requests + approve
     compose/compose_screen.dart  pick/camera → WebP (plan's media limit) → /media-upload/bulk → /posts; postsVersionProvider
     compose/compose_draft.dart   composeDraftProvider: images/caption/category the composer takes when it opens
+    compose/video_compressor.dart planVideo() (keep / compress / too long, bitrate math) + the `outstagram/video` channel;
+                                 native side android/app/src/main/kotlin/com/cyto/outstagram/VideoCompressor.kt (Media3)
     compose/share_intent.dart    ShareIntentListener ("Share to Outstagram", receive_sharing_intent) → draft → /create
     exams/
       engine/                    pure Dart port of outstagram-web engine.ts: models (raw-JSON questions), scoring, presets
