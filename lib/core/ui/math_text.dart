@@ -41,7 +41,14 @@ class MathText extends StatelessWidget {
         // texBreak splits at binary operators/relations so long inline formulas wrap like text.
         final math = Math.tex(seg.text, mathStyle: MathStyle.text, textStyle: base,
             onErrorFallback: (e) => Text(seg.text, style: base));
-        final parts = math.texBreak().parts;
+        // texBreak throws on some trees (e.g. `\,` spacing: UnsupportedError in TemporaryNode.rightType);
+        // then the formula just doesn't wrap.
+        List<Widget> parts;
+        try {
+          parts = math.texBreak().parts;
+        } catch (_) {
+          parts = [math];
+        }
         for (var i = 0; i < parts.length; i++) {
           // texBreak drops the space after the operator it breaks at; a normal space (~TeX's thick
           // space) puts it back and stays a line-break opportunity.
@@ -66,7 +73,8 @@ class MathSegment {
   String toString() => isMath ? (display ? '\$\$$text\$\$' : '\$$text\$') : text;
 }
 
-final _cmd = RegExp(r'\\\\([a-zA-Z])');
+// letters (\\theta) and the spacing commands (\\, \\; \\: \\!), which would otherwise read as a row break + ","
+final _cmd = RegExp(r'\\\\([a-zA-Z,;:!])');
 final _bareCmd = RegExp(r'\\[a-zA-Z]+(?:\{[^{}]*\})*(?:[_^](?:\{[^{}]*\}|\w))*');
 
 /// Repairs the text the way the web does before rendering.

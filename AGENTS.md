@@ -293,6 +293,14 @@ Host specifics (Windows): device ids, tool paths, cloud project ids and the QA a
     and closed the app. Pass a `ValueNotifier` instead (`showCommentsSheet`).
 40. **Exam alerts without the exact-alarm permission** can arrive ~20 min late, so "5 minutes left" is only scheduled
     when exact alarms are allowed (`alertAt(exactOnly: true)`); "Time's up" is always scheduled.
+41. **README screenshots** are the real app rendered in a test on demo data (`test/screenshots/`, skipped unless
+    `--dart-define=SCREENSHOTS=true`), then framed by `tool/screenshots/compose.py` into `docs/screenshots/`.
+    Tests draw text with no family in a box font, so the theme takes `debugFontFamily` / `debugFontFamilyFallback`
+    (null in the app). Package fonts (KaTeX) and plugins (share intent, home widget, wakelock) are stubbed in the
+    harness. Never use real users' posts or photos there.
+42. **Question-bank LaTeX doubles every backslash.** `cleanLatex` collapses `\\` before letters and the spacing commands
+    (`\\,` `\\;` `\\:` `\\!`), the same as the web's `Latex.tsx`. A leftover `\\,` reads as a row break and made
+    `texBreak` throw (now caught in `MathText`).
 
 ---
 

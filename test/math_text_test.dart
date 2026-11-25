@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:outstagram/core/ui/math_text.dart';
 
@@ -29,5 +30,16 @@ void main() {
 
   test('plain text is untouched', () {
     expect(parseMath('no math here').single.isMath, isFalse);
+  });
+
+  test('doubled spacing commands collapse too (\\\\, is not a row break)', () {
+    expect(cleanLatex(r'$2i\\hbar\\,\\hat{p}$'), r'$2i\hbar\,\hat{p}$');
+    expect(cleanLatex(r'$a \\; b \\! c$'), r'$a \; b \! c$');
+  });
+
+  testWidgets('inline math that texBreak cannot split (doubled thin space) still renders', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: MathText(r'Answer: $2i\\hbar\\,\\hat{p}$'))));
+    expect(tester.takeException(), isNull);
+    expect(find.byType(MathText), findsOneWidget);
   });
 }

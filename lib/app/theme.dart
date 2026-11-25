@@ -35,11 +35,20 @@ abstract final class Brand {
   static const ash = Color(0xFF6B6E8F);
 }
 
+/// Test-only fonts (README screenshots: test/screenshots). Null in the app, so phones use their own fonts.
+/// Set before the themes are first read.
+@visibleForTesting
+String? debugFontFamily;
+@visibleForTesting
+List<String>? debugFontFamilyFallback;
+
 ThemeData _base(ColorScheme cs) {
   final radius = BorderRadius.circular(14);
   return ThemeData(
     useMaterial3: true,
     colorScheme: cs,
+    fontFamily: debugFontFamily,
+    fontFamilyFallback: debugFontFamilyFallback,
     scaffoldBackgroundColor: cs.surface,
     visualDensity: VisualDensity.standard,
     appBarTheme: AppBarTheme(
@@ -47,7 +56,14 @@ ThemeData _base(ColorScheme cs) {
       foregroundColor: cs.onSurface,
       surfaceTintColor: Colors.transparent,
       centerTitle: false,
-      titleTextStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: cs.onSurface, letterSpacing: -0.5),
+      titleTextStyle: TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.w800,
+        color: cs.onSurface,
+        letterSpacing: -0.5,
+        fontFamily: debugFontFamily,
+        fontFamilyFallback: debugFontFamilyFallback,
+      ),
     ),
     cardTheme: CardThemeData(
       color: cs.surfaceContainer,
@@ -69,7 +85,7 @@ ThemeData _base(ColorScheme cs) {
       style: FilledButton.styleFrom(
         minimumSize: const Size.fromHeight(54),
         shape: RoundedRectangleBorder(borderRadius: radius),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, fontFamily: debugFontFamily),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -77,7 +93,7 @@ ThemeData _base(ColorScheme cs) {
         minimumSize: const Size.fromHeight(54),
         shape: RoundedRectangleBorder(borderRadius: radius),
         side: BorderSide(color: cs.outlineVariant),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, fontFamily: debugFontFamily),
       ),
     ),
     navigationBarTheme: NavigationBarThemeData(
