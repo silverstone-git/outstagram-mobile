@@ -53,17 +53,22 @@ On every push: `flutter pub get` → `analyze` → `test` → `build apk --relea
 On pushes to `main` (and manual runs on `main`), after `build` passes: build the **prod** APK with build number
 `1000 + run_number`, then `aws s3 cp` it over **the same key** every time (`apps/outstagram.apk`, override with the
 repo variable `APK_KEY`), plus a sidecar `apps/outstagram.json` `{build, commit, built_at, bytes}`. R2 has no
-versioning, so the bucket only ever holds one APK (~55 MB). Public link:
-**`https://pub-682f1a94c94443278f61ec7ca3dadaec.r2.dev/apps/outstagram.apk`** (the bucket's r2.dev domain maps the
-bucket root; the APK isn't under the server's `outstagram/` prefix).
+versioning, so the bucket only ever holds one APK (~55 MB). It goes to the **public** bucket `pariksha`, so the link is
+**`https://outsiebucket.aryan.cfd/apps/outstagram.apk`**.
+
+**Buckets (user, 2026-11-25):** `pariksha` = public things (question images under `pariksha/`, the APK), custom domain
+`https://outsiebucket.aryan.cfd` (its r2.dev URL is disabled). `outstagram` = private user content (post media and
+avatars under `outstagram/`), no public domain: the server hands out presigned links, re-signed on read. Don't make it
+public and don't set `S3_PUBLIC_BASE_URL` to a public domain for it. Both buckets also hold some old copies of each
+other's objects. `../env.r2api.txt` has a separate R2 token (S3 API only, no Cloudflare API rights).
 
 Secrets (repo → Settings → Secrets → Actions); the job is skipped with a notice until they exist:
 | Secret | Value |
 |---|---|
 | `ANDROID_SIGNING_KEYSTORE_B64` | `base64 -w0 ~/.android/debug.keystore` from **this machine**: same SHA-1 as local builds, so CI and local APKs update each other and Google sign-in keeps working |
-| `APK_S3_ENDPOINT` | `https://bb4544b9a60b6d07b62ad4c74e9656e4.r2.cloudflarestorage.com` (account root, **without** `/outstagram`) |
-| `APK_S3_BUCKET` | `outstagram` |
-| `APK_S3_ACCESS_KEY_ID` / `APK_S3_SECRET_ACCESS_KEY` | an R2 API token with write access to the bucket (best: a separate token, so the CI key can be revoked without touching the server's) |
+| `APK_S3_ENDPOINT` | `R2_S3_ENDPOINT` from `../env.r2api.txt` (account root, **without** a bucket path) |
+| `APK_S3_BUCKET` | `pariksha` |
+| `APK_S3_ACCESS_KEY_ID` / `APK_S3_SECRET_ACCESS_KEY` | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` from `../env.r2api.txt` (separate from the server's key) |
 
 Because CI build numbers start at 1001, a local build (`+1`) is a "downgrade": install it with `adb install -r -d`.
 

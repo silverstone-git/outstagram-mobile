@@ -27,7 +27,7 @@ String formatTime(num seconds) {
   return '${p(s ~/ 3600)}:${p((s % 3600) ~/ 60)}:${p(s % 60)}';
 }
 
-const r2PublicEndpoint = 'https://pub-682f1a94c94443278f61ec7ca3dadaec.r2.dev';
+const r2PublicEndpoint = 'https://outsiebucket.aryan.cfd';
 
 /// Question images: absolute URLs as-is, relative paths on the public R2 bucket.
 String resolveImagePath(String? path) {

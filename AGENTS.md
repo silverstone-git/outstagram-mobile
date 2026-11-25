@@ -217,7 +217,8 @@ Host specifics (Windows, user `karti`):
 10. The staging banner was removed on purpose (it covered the status bar edge-to-edge). Staging is marked by the app name "Outstagram β" and a chip on sign-in.
 11. Two OAuth client IDs exist; only the **Web** one is used. See `docs/auth.md` §5 before touching Google sign-in.
 12. Uploaded media URLs are stored as **7-day presigned** URLs. Since outstagram-server PR #3 the server re-signs them on read
-    (`media.fresh_media_url`), so old images work again; `S3_PUBLIC_BASE_URL` would make them permanent (`docs/TODO.md` §2).
+    (`media.fresh_media_url`), so old images work again. The `outstagram` bucket is **private by design**; public things
+    (question images, the APK) live in `pariksha` at `https://outsiebucket.aryan.cfd` (`docs/environments.md`, `docs/TODO.md` §2).
 13. Samsung blanks `screencap` while a password field / secure keyboard or the Google account sheet is up. Close the keyboard
     before screenshotting; `adb shell input text` into a field the scrolled layout moved can land in the wrong field.
 14. The theme's `FilledButton` has `minimumSize: Size.fromHeight(54)` (infinite min width). In a `Row` or dialog

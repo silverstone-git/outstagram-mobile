@@ -69,26 +69,17 @@ and is rate-limited to a few emails per hour, so it's unusable for friends.
 
 **Optional later:** set a password from the profile (needs `PUT /me/password`); account linking UI.
 
-## 2. Permanent media URLs  ← important, affects web too
+## 2. Media links (decided 2026-11-25)
 
-Posts store presigned R2 URLs that **expire after 7 days**, so images on older posts break (web and app).
-**Mitigated 2026-11-24** (outstagram-server PR #3): listings and post view re-sign stored URLs on read. Still worth
-doing for permanent, CDN-cacheable links:
-- **Found (2026-11-25):** bucket `outstagram` is already public at `https://pub-682f1a94c94443278f61ec7ca3dadaec.r2.dev`
-  (the same domain the web uses for question images). Objects sit under an `outstagram/` prefix because the server's
-  `S3_ENDPOINT` ends in `/outstagram`, so the base is **`https://pub-682f1a94c94443278f61ec7ca3dadaec.r2.dev/outstagram`**
-  (checked: a server-signed URL and `<base>/<key>` return the same image). Python's default user agent gets a 403
-  from r2.dev; browsers/apps are fine. r2.dev is rate-limited and not CDN-cached: a custom domain
-  (`media.aryan.cfd`, Cloudflare → R2 → bucket → Settings → Custom domains) is the better final base.
-- [ ] Set it (blocked for Claude by the sandbox on 2026-11-25; the user runs it):
-  `gcloud run services update outsie-staging --region asia-northeast1 --update-env-vars S3_PUBLIC_BASE_URL=https://pub-682f1a94c94443278f61ec7ca3dadaec.r2.dev/outstagram`
-  then the same for `outsie`.
-- Set `S3_PUBLIC_BASE_URL=<that origin>` on `outsie` and `outsie-staging`
-  (`gcloud run services update outsie --region asia-northeast1 --update-env-vars S3_PUBLIC_BASE_URL=…`). The server
-  then returns `public_url` and the app already prefers it.
-- Update the web (`outstagram-web/src/services/api.ts` `uploadImages`) to prefer `public_url` too.
-- Backfill: a one-off script that rewrites `mediaurl.url` from presigned → `<base>/<object_key>`
-  (object key = last path segment before `?`). Take a DB backup first; test on staging.
+The `outstagram` bucket is **private by design** (user, 2026-11-25: `pariksha` = public, `outstagram` = private user
+content). Posts store 7-day presigned URLs and the server re-signs them on every read (`media.fresh_media_url`,
+cached per key so a link stays stable for ~3 days), so old images keep working. The app caches images by object path
+(`Avatar.cacheKey`), so re-signed links don't re-download. Don't set `S3_PUBLIC_BASE_URL` for this bucket.
+- [ ] Optional: a stable `GET /media/{key}` on outsie that 302s to a fresh presigned URL, stored instead of the
+      presigned URL at upload time (links never expire in the DB; still unguessable-key access, like presigned links).
+- [x] Question images (public `pariksha` bucket) moved to `https://outsiebucket.aryan.cfd` in web, app and pariksha
+      (2026-11-25) after the r2.dev URL was disabled. The **web needs a redeploy** (`outstagram-web/scripts/preview.sh deploy`
+      on the portfolio box); pariksha too wherever it's served.
 
 ## 3. P3: Exams ✅ (2026-11-24)
 
@@ -201,7 +192,7 @@ app icon and splash done 2026-11-24 (vector, from the new logo kit); Play needs 
 - Delete unused platform folders (`ios/ linux/ macos/ windows/ web/`) or keep them deliberately.
 - Remove `build_runner` from dev deps if codegen is never adopted.
 - [x] CI job `publish-apk` (2026-11-25): pushes to `main` build the prod APK and **replace** `apps/outstagram.apk`
-      in the R2 bucket (one object, overwritten). Needs the secrets in `docs/environments.md` → "Friends' APK link".
-- [ ] Point the web landing's `APPS.androidApk` (`outstagram-web/src/features/public/routes.ts`, now a Drive link) at the R2 URL.
+      in the public `pariksha` bucket (one object, overwritten). Needs the secrets in `docs/environments.md` → "Friends' APK link".
+- [ ] Point the web landing's `APPS.androidApk` (`outstagram-web/src/features/public/routes.ts`, now a Drive link) at `https://outsiebucket.aryan.cfd/apps/outstagram.apk` once the first upload exists.
 - Add the mobile app to the cross-project roadmap in `outstagram-web/TODO.md`.
 - Upgrade plugins that warn about "Built-in Kotlin" when new versions exist (build output lists them).
