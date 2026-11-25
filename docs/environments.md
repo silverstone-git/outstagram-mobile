@@ -69,4 +69,9 @@ On every push: `flutter pub get` → `analyze` → `test` → `build apk --relea
 
 User's phone: Samsung S22 `SM S901E`, Android 16, wireless adb id `adb-R5CT31BJ23N-qLOs5E._adb-tls-connect._tcp`.
 `adb -s <id> install -r <apk>` is safe. **Don't launch or tap** without asking; the user may be using the phone.
-Screenshot: `adb -s <id> exec-out screencap -p > shot.png`.
+Screenshot: `adb -s <id> exec-out screencap -p > shot.png`. The phone may also be on **USB** (`R5CT31BJ23N`).
+The QA loop, its rules and helpers are in `docs/qa.md` / `tool/qa/qa.sh`.
+
+Database access: the auto-mode sandbox refuses direct connections to the prod/staging Postgres unless the user
+grants it in the conversation (they did on 2026-11-25). Prefer self-healing server code (startup migrations,
+lazy back-fills such as `email_auth.sync_from_supabase`) over one-off scripts, so a deploy fixes every environment.

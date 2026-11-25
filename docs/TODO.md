@@ -8,11 +8,12 @@ Tick items off here (and in `AGENTS.md` §1) when done. Last updated: 2026-11-25
 - [x] **Google sign-in on device (prod flavor).** Works (2026-11-24): Web client as `serverClientId`, Android
       OAuth client with the debug SHA-1 (`docs/auth.md` §5).
 - [x] **OAuth consent screen**: published (External) and brand-verified by the user, 2026-11-25.
-- [ ] **Supabase email templates**: Magic Link + Confirm signup must contain `{{ .Token }}`, OTP length 6, on **both**
+- [x] **Supabase email templates** (user, 2026-11-25): Magic Link + Confirm signup must contain `{{ .Token }}`, OTP length 6, on **both**
       projects (`docs/auth.md` §6). Email codes, password reset and confirming emails all depend on it.
-- [ ] **On-device QA of email + streak** (prod): register → confirm step (code arrives, "Do it later" → badge on profile,
-      composer banner, posting → sheet), email-code sign-in with a new address, forgot password, change email; pop quiz →
-      celebration → "Remind me" → permission → a reminder fires (set the time a few minutes ahead on `/streak`).
+- [x] **On-device QA of streak, gate, profile photo** (S22, prod, 2026-11-25; `docs/qa.md` §4 lists what it found).
+- [ ] **Email codes on device** (needs the user's inbox): register → confirm step (code arrives), email-code sign-in with a new
+      address, forgot password, change email. Also still unseen: a streak reminder actually firing (set "Remind me at" a few
+      minutes ahead on `/streak` on a day the quiz isn't done).
 - [ ] **Supabase Redirect URLs** for the browser fallback (`docs/auth.md` §4).
 - [ ] **Clean prod test data before release:** QA account `qa_tester1` (user_id 7, created 2026-11-24 by Claude for adb QA).
 - [ ] **On-device QA of P2**: feed/explore, like/double-tap, comments, search → follow → approve (two accounts),

@@ -8,7 +8,8 @@ status, the repository map and the commands. Deep dives live in `docs/`:
 | `docs/auth.md` | Every sign-in flow, sessions and refresh, Google Cloud + Supabase setup, troubleshooting |
 | `docs/api.md` | The outsie endpoints the app uses, their exact shapes and quirks |
 | `docs/environments.md` | Staging vs prod, flavors, configs, deploys, databases, devices, release signing |
-| `docs/TODO.md` | Roadmap and open work, including the email sign-in code + SMTP plan |
+| `docs/TODO.md` | Roadmap and open work |
+| `docs/qa.md` | On-device QA loop, rules (the phone is the user's), what can't be tested, lessons (helpers: `tool/qa/qa.sh`) |
 | `PLAN.md` | The original product/architecture plan (phases P0–P7, mobile-only extras). Background, not status |
 
 Last updated: 2026-11-25 (email codes, password reset, confirmed-email gate, daily streak + pop quizzes + local reminders).
@@ -248,7 +249,23 @@ Host specifics (Windows, user `karti`):
     the app learns the streak (launch, resume, finished exam) and cancelled on sign-out. Inexact alarms only (no
     SCHEDULE_EXACT_ALARM). Off until the user says yes (celebration button or the switch on `/streak`), which asks
     for POST_NOTIFICATIONS on Android 13+. Tapping one opens `/streak?quiz=1`, which starts the pop quiz.
-28. Running `dart format` over `lib/` reflows files written in the older style; format only the files you touch.
+28. Running `dart format` over `lib/` reflows files written in the older style; format only the files you touch
+    (`dart format -l 120 <files>`). Reverting the churn afterwards needs a `git checkout` the sandbox may refuse.
+29. **Schema drift between DBs:** `create_all` never alters existing tables or enums. Prod (older) lacked 5 of the
+    10 `postcategory` labels until 2026-11-25 while CI/staging (fresh) had them, so tests were green and prod 500'd.
+    New columns → `main._add_missing_columns`; enum labels → `main._add_missing_enum_values`. Check prod logs
+    (`tool/qa/qa.sh errors`) after every deploy.
+30. **Editing files from scripts:** shell heredocs break on apostrophes inside `bash -c`; write the Python edit script
+    to a file first. Files with CRLF endings don't match `
+`-joined patterns, so use the Edit tool for them. A
+    multi-file edit script should check every pattern before writing any file (one run left `App.tsx` edited and
+    `Login.tsx` not).
+31. **`gh` prints hints on stderr.** In PowerShell, `2>$null` plus the non-zero exit made a successful
+    `gh pr create` look failed. Don't suppress stderr; confirm with `gh pr list --head <branch>` or `gh pr view`.
+32. **Long waits:** CI runs (app CI ~15 min with the APK build) and `flutter build apk` (~6–13 min) exceed the 10-min
+    foreground limit. Start them with `run_in_background` and wait for the notification instead of re-running or polling.
+33. **Widget tests:** `ListView` builds lazily, so off-screen children aren't found; put test fixtures in a
+    `SingleChildScrollView` + `Column`. Importing another test file (e.g. `auth_test.dart` helpers) also imports its `main`.
 
 ---
 
