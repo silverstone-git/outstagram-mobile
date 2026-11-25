@@ -17,7 +17,11 @@ import '../features/exams/exam_result_screen.dart';
 import '../features/exams/exam_runner_screen.dart';
 import '../features/exams/exam_session.dart';
 import '../features/exams/exams_home_screen.dart';
+import '../features/exams/offline_packs_screen.dart';
 import '../features/feed/home_screen.dart';
+import '../features/feed/post_detail_screen.dart';
+import '../features/profile/edit_profile_screen.dart';
+import '../features/profile/follow_list_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/social/search_screen.dart';
 import '../features/streak/streak_screen.dart';
@@ -26,6 +30,17 @@ import '../features/tutor/tutor_library_screen.dart';
 import '../features/shell/app_shell.dart';
 
 const _authRoutes = {'/sign-in', '/register', '/sign-in/email', '/forgot-password'};
+
+/// `/outstagram/p/?id=X` → `/p/X`, `/outstagram/u/?name=Y` → `/u/Y`; anything else → the feed.
+String appLinkTarget(Uri uri) {
+  final seg = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+  final kind = seg.length >= 2 ? seg[1] : '';
+  final id = uri.queryParameters['id']?.trim() ?? '';
+  final name = uri.queryParameters['name']?.trim() ?? '';
+  if (kind == 'p' && id.isNotEmpty) return '/p/${Uri.encodeComponent(id)}';
+  if (kind == 'u' && name.isNotEmpty) return '/u/${Uri.encodeComponent(name)}';
+  return '/feed';
+}
 
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ValueNotifier<AsyncValue<Session?>>(const AsyncLoading());
@@ -91,7 +106,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/u/:username',
         builder: (_, s) => UserProfileScreen(username: s.pathParameters['username']!),
+        routes: [
+          GoRoute(
+            path: 'followers',
+            builder: (_, s) => FollowListScreen(username: s.pathParameters['username']!, initial: 'followers'),
+          ),
+          GoRoute(
+            path: 'following',
+            builder: (_, s) => FollowListScreen(username: s.pathParameters['username']!, initial: 'following'),
+          ),
+        ],
       ),
+      GoRoute(path: '/p/:id', builder: (_, s) => PostDetailScreen(postId: s.pathParameters['id']!)),
+      // App Links (https://aryan.cfd/outstagram/p/?id=… and /u/?name=…, the web's share links) arrive with
+      // that path; map them onto the app's own routes.
+      GoRoute(path: '/outstagram/p', redirect: (_, s) => appLinkTarget(s.uri)),
+      GoRoute(path: '/outstagram/u', redirect: (_, s) => appLinkTarget(s.uri)),
+      GoRoute(path: '/profile/edit', builder: (_, _) => const EditProfileScreen()),
+      GoRoute(path: '/exams/offline', builder: (_, _) => const OfflinePacksScreen()),
       // Exams run full-screen, outside the tab shell.
       GoRoute(path: '/exam/run', builder: (_, _) => const ExamRunnerScreen()),
       GoRoute(

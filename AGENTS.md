@@ -49,11 +49,11 @@ advantages (see `PLAN.md` §5).
 | P0 Foundation | Flavors, configs, theme, router shell, Dio client, CI | ✅ done |
 | P1 Auth | Password + register, native Google, PKCE browser fallback, refresh tokens | ✅ done (Google sign-in verified on device 2026-11-24: Web client as `serverClientId` + Android client with the debug SHA-1) |
 | P1b Email | 6-digit email codes: sign-in, forgot/change password, confirm email (onboarding step with "Do it later"), change email; posting/uploads/tutor need a confirmed email | ✅ built 2026-11-25 (unit/widget tested; needs the Supabase email templates with `{{ .Token }}`, `docs/auth.md` §6; on-device QA pending) |
-| P2 Social | Feed/Explore, post card, likes, comments, search, profiles, follow requests, composer | ✅ done (needs on-device QA) |
+| P2 Social | Feed/Explore, post card, likes, comments, search, profiles, follow requests, composer; unfollow, decline, follower lists, edit profile, delete comment, post page, zoom, video (2026-11-25) | ✅ done (needs on-device QA) |
 | P3 Exams | Dart port of the Pariksha engine, presets, practice, community exams, runner, results, history | ✅ done 2026-11-24 (verified on device; leftovers in `docs/TODO.md` §3) |
 | P4 AI tutor | SSE streaming, Markdown + LaTeX, skills, quota, library, saved equations, voice input | ✅ built 2026-11-24 (unit/widget tested; on-device QA pending, `docs/TODO.md` §4) |
 | P5 Paywall | 429/402/413 → upgrade sheet, Razorpay test | ✅ built 2026-11-24 (widget tested; prod on Razorpay test keys; payment verified on device 2026-11-24, `docs/TODO.md` §5) |
-| P6 Mobile extras | Push, share-target, result cards, App Links, offline packs | 🟡 result cards, share-target, launcher shortcuts done 2026-11-24 (verified on device); daily streak, pop quizzes and local streak reminders built 2026-11-25; push dropped (user: no Firebase); App Links need setup (`docs/TODO.md` §7) |
+| P6 Mobile extras | Push, share-target, result cards, App Links, offline packs | ✅ built 2026-11-25: result cards, share-target (photos, text, videos), shortcuts, streak + freezes + friends + home widget, local alerts (exam time left, tutor back), offline packs, App Links (needs `assetlinks.json` uploaded, `docs/TODO.md` §7); push dropped (no Firebase). On-device QA pending |
 | P7 Release | Upload key, Play Billing, account deletion, Play listing | ⏳ |
 
 **Testing setup decided by the user (2026-11-24):** the *prod* flavor talks to the **production** outsie +
@@ -93,15 +93,20 @@ lib/
                                  email_code_screen.dart (/sign-in/email), forgot_password_screen.dart (/forgot-password, /account/password)
     account/                     account_api.dart (GET /me → meProvider, confirm/change email), verify_email_screen.dart (/verify-email),
                                  account_screen.dart (/account, /account/email, VerifyEmailBanner), verify_gate.dart (403 → sheet)
-    streak/                      streak_api.dart (StreakStatus, streakProvider), streak_screen.dart (/streak, pop quiz, StreakHomeCard),
+    streak/                      streak_api.dart (StreakStatus incl. freezes, streakProvider, friendStreaksProvider),
+                                 streak_widget.dart (home-screen widget data), local_alerts.dart (exam time left, tutor back),
+                                 streak_screen.dart (/streak, pop quiz, freezes, friends, StreakHomeCard),
                                  streak_visuals.dart (animated flame, chip, confetti, week strip, calendar, reward, milestones),
                                  streak_celebration.dart (full-screen "Day N" after an exam), streak_reminders.dart (local notifications + copy)
     shell/                       AppShell (NavigationBar), ComingSoon placeholder
     feed/                        models.dart (Post, Comment, Profile, …), social_api.dart, post_card.dart,
-                                 post_list.dart (infinite + pull-to-refresh), comments_sheet.dart, home_screen.dart
+                                 post_list.dart (infinite + pull-to-refresh), comments_sheet.dart (long-press delete), home_screen.dart,
+                                 post_detail_screen.dart (/p/:id), media_viewer.dart (full-screen pinch zoom, PostVideo)
     social/search_screen.dart    debounced /users/search
     profile/                     profile_view.dart (header + posts, follow button, stats), profile_screen.dart,
-                                 profile_photo.dart (tap your avatar: gallery / camera / remove → PUT|DELETE /me/avatar)
+                                 profile_photo.dart (tap your avatar: gallery / camera / remove → PUT|DELETE /me/avatar),
+                                 follow_list_screen.dart (/u/:u/followers|following, unfollow, remove follower),
+                                 edit_profile_screen.dart (/profile/edit: name, bio → PUT /me)
     activity/activity_screen.dart follow requests + approve
     compose/compose_screen.dart  pick/camera → WebP (plan's media limit) → /media-upload/bulk → /posts; postsVersionProvider
     compose/compose_draft.dart   composeDraftProvider: images/caption/category the composer takes when it opens
@@ -112,6 +117,8 @@ lib/
       exam_session.dart          running exam (Notifier) autosaved to shared_preferences (exam_session_v1); resume
       exams_home_screen.dart     streak card, resume card, quick practice, mocks, attempts, community
       exam_launcher.dart         launchExam(): discard-unfinished dialog → load → runner (Exams tab and pop quiz); compactButton
+      offline_packs.dart         OfflinePacks (saved subjects), offlineAwareSampler, PendingAttempts (upload later, taken_at)
+      offline_packs_screen.dart  /exams/offline: save/refresh/remove packs, pending uploads
       exam_runner_screen.dart    /exam/run full-screen: PageView, palette, timer + auto-submit, wakelock, PopScope
       exam_result_screen.dart    /exam/result (fresh, saves attempt) and /exam/attempt/:id; score, topics, SWOT, review,
                                  "Ask the AI tutor" per question (needs the saved attempt id); share button
@@ -136,11 +143,12 @@ test/tutor_test.dart             SSE decoding, stream errors (429/402/404 bodies
 test/avatar_test.dart            avatar_url parsing in every model, cache key, Avatar widget
 test/email_streak_test.dart      email-code/reset sign-in, register → confirm step, /me + 403 email_unverified, CodeField,
                                  streak parsing, reminder copy, streak widgets
+test/social_basics_test.dart     follow/unfollow/reject/lists/PUT /me/comment delete/post endpoints, edit form, Activity decline
 tool/exam_golden.ts              regenerates the golden fixtures with bun from ../outstagram-web (run after engine.ts changes)
 assets/brand/                    mark.svg (the logo symbol, from ../assets/01-icon-gradient.svg) + the logo kit README
 config/{staging,prod}.json       public build config (dart-define-from-file)
 android/                         Flutter-generated; flavors in app/build.gradle.kts
-.github/workflows/ci.yml         analyze, test, staging APK artifact
+.github/workflows/ci.yml         analyze, test, staging APK artifact; publish-apk (main: prod APK → one fixed R2 object)
 ```
 
 Platform folders `ios/ linux/ macos/ windows/ web/` are the untouched scaffold. They're unused and can be deleted.
@@ -213,7 +221,8 @@ Host specifics (Windows, user `karti`):
 10. The staging banner was removed on purpose (it covered the status bar edge-to-edge). Staging is marked by the app name "Outstagram β" and a chip on sign-in.
 11. Two OAuth client IDs exist; only the **Web** one is used. See `docs/auth.md` §5 before touching Google sign-in.
 12. Uploaded media URLs are stored as **7-day presigned** URLs. Since outstagram-server PR #3 the server re-signs them on read
-    (`media.fresh_media_url`), so old images work again; `S3_PUBLIC_BASE_URL` would make them permanent (`docs/TODO.md` §2).
+    (`media.fresh_media_url`), so old images work again. The `outstagram` bucket is **private by design**; public things
+    (question images, the APK) live in `pariksha` at `https://outsiebucket.aryan.cfd` (`docs/environments.md`, `docs/TODO.md` §2).
 13. Samsung blanks `screencap` while a password field / secure keyboard or the Google account sheet is up. Close the keyboard
     before screenshotting; `adb shell input text` into a field the scrolled layout moved can land in the wrong field.
 14. The theme's `FilledButton` has `minimumSize: Size.fromHeight(54)` (infinite min width). In a `Row` or dialog
@@ -266,6 +275,13 @@ Host specifics (Windows, user `karti`):
     foreground limit. Start them with `run_in_background` and wait for the notification instead of re-running or polling.
 33. **Widget tests:** `ListView` builds lazily, so off-screen children aren't found; put test fixtures in a
     `SingleChildScrollView` + `Column`. Importing another test file (e.g. `auth_test.dart` helpers) also imports its `main`.
+34. **CI memory:** `android/gradle.properties` asks for an 8 GB heap; on GitHub's 16 GB runner Gradle + Kotlin daemon +
+    R8 got killed (exit 143, "The operation was canceled"). CI writes a smaller `~/.gradle/gradle.properties` and builds
+    arm64 only for the staging check (arm + arm64 for the published APK).
+35. **Python edits from bash heredocs:** `'\\n'` inside a heredoc'd Python string becomes a real newline in the
+    written file (it broke Dart strings and a YAML block twice). Write edit scripts with the Write tool, or use `chr(10)`.
+36. **Buckets:** `pariksha` is public (`https://outsiebucket.aryan.cfd`: question images, the APK); `outstagram` is
+    private user media (presigned links only). Don't make user media public.
 
 ---
 

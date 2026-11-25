@@ -3,20 +3,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../profile/profile_view.dart' show profileProvider;
 import '../../core/auth/auth_controller.dart';
 import '../../core/ui/avatar.dart';
 import '../../core/ui/feedback.dart';
+import '../../core/config/env.dart';
 import 'comments_sheet.dart';
+import 'media_viewer.dart';
 import 'models.dart';
 import 'social_api.dart';
 
 class PostCard extends ConsumerStatefulWidget {
-  const PostCard({super.key, required this.post, this.onDeleted});
+  const PostCard({super.key, required this.post, this.onDeleted, this.detail = false});
 
   final Post post;
   final VoidCallback? onDeleted;
+
+  /// Shown on its own page (`/p/:id`): no "Open post" item.
+  final bool detail;
 
   @override
   ConsumerState<PostCard> createState() => _PostCardState();
@@ -67,7 +73,7 @@ class _PostCardState extends ConsumerState<PostCard> with SingleTickerProviderSt
 
   Future<void> _openComments() async {
     final added = await showCommentsSheet(context, p);
-    if (added > 0 && mounted) setState(() => p.commentCount += added);
+    if (added != 0 && mounted) setState(() => p.commentCount = (p.commentCount + added).clamp(0, 1 << 30));
   }
 
   Future<void> _delete() async {
@@ -117,17 +123,25 @@ class _PostCardState extends ConsumerState<PostCard> with SingleTickerProviderSt
               ]),
             ),
           ),
-          if (mine)
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_horiz),
-              onSelected: (v) => v == 'delete' ? _delete() : null,
-              itemBuilder: (_) => const [PopupMenuItem(value: 'delete', child: Text('Delete'))],
-            ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_horiz),
+            onSelected: (v) {
+              if (v == 'delete') _delete();
+              if (v == 'share') sharePost(p);
+              if (v == 'open') context.push('/p/${p.id}');
+            },
+            itemBuilder: (_) => [
+              if (!widget.detail) const PopupMenuItem(value: 'open', child: Text('Open post')),
+              const PopupMenuItem(value: 'share', child: Text('Share link')),
+              if (mine) const PopupMenuItem(value: 'delete', child: Text('Delete')),
+            ],
+          ),
         ]),
       ),
       // media
       if (p.media.isNotEmpty)
         GestureDetector(
+          onTap: p.media[_page].isVideo ? null : () => openMediaViewer(context, p.media, _page),
           onDoubleTap: _doubleTapLike,
           child: AspectRatio(
             aspectRatio: 1,
@@ -241,12 +255,7 @@ class _MediaView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    if (media.isVideo) {
-      return Container(
-        color: cs.surfaceContainerHigh,
-        child: const Center(child: Icon(Icons.play_circle_outline_rounded, size: 64)),
-      );
-    }
+    if (media.isVideo) return PostVideo(url: media.url);
     return CachedNetworkImage(
       imageUrl: media.url,
       fit: BoxFit.cover,
@@ -314,3 +323,15 @@ class _Caption extends StatelessWidget {
     return Text.rich(TextSpan(style: base, children: spans));
   }
 }
+
+/// The post's web link (`<WEB_BASE>/p/?id=<id>`: a real folder on the static host); the app opens it via
+/// App Links at `/p/:id` (router.dart `appLinkTarget`).
+String postLink(Post p) => '${Env.webBase}/p/?id=${Uri.encodeQueryComponent(p.id)}';
+
+/// A profile's web link; the app opens it at `/u/:username`.
+String profileLink(String username) => '${Env.webBase}/u/?name=${Uri.encodeQueryComponent(username)}';
+
+Future<void> sharePost(Post p) => SharePlus.instance.share(ShareParams(
+      text: [if (p.caption.isNotEmpty) p.caption.split('\n').first, postLink(p)].join('\n'),
+      subject: 'Post by @${p.author} on Outstagram',
+    ));

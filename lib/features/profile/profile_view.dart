@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/net/api_client.dart';
 import '../account/account_api.dart';
+import 'follow_list_screen.dart' show confirmUnfollow;
 import 'profile_photo.dart';
+import '../streak/streak_visuals.dart' show StreakBadge;
 import '../account/account_screen.dart';
 import '../../core/net/api_error.dart';
 import '../../core/ui/avatar.dart';
@@ -79,8 +81,10 @@ class _Header extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _Count('${p.posts}', 'posts'),
-                      _Count('${p.followers}', 'followers'),
-                      _Count('${p.following}', 'following'),
+                      _Count('${p.followers}', 'followers',
+                          onTap: () => context.push('/u/${p.username}/followers')),
+                      _Count('${p.following}', 'following',
+                          onTap: () => context.push('/u/${p.username}/following')),
                     ],
                   ),
                 ),
@@ -92,6 +96,10 @@ class _Header extends ConsumerWidget {
                 Flexible(
                   child: Text(p.fullname, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
                 ),
+                if (p.streak > 0) ...[
+                  const SizedBox(width: 8),
+                  Tooltip(message: '${p.streak}-day exam streak', child: StreakBadge(days: p.streak)),
+                ],
                 if (isMe && (ref.watch(meProvider).value?.needsVerification ?? false)) ...[
                   const SizedBox(width: 8),
                   const _UnverifiedBadge(),
@@ -107,6 +115,15 @@ class _Header extends ConsumerWidget {
                   padding: const EdgeInsets.only(top: 6),
                   child: Text('Follows you', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
                 ),
+            ],
+            if (isMe) ...[
+              const SizedBox(height: 14),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(40)),
+                onPressed: () => context.push('/profile/edit'),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('Edit profile'),
+              ),
             ],
             if (isMe && (ref.watch(meProvider).value?.needsVerification ?? false)) ...[
               const SizedBox(height: 14),
@@ -159,17 +176,25 @@ class _UnverifiedBadge extends StatelessWidget {
 }
 
 class _Count extends StatelessWidget {
-  const _Count(this.value, this.label);
+  const _Count(this.value, this.label, {this.onTap});
 
   final String value;
   final String label;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      Text(value, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
-      Text(label, style: TextStyle(fontSize: 12.5, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-    ],
+  Widget build(BuildContext context) => InkWell(
+    borderRadius: BorderRadius.circular(10),
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Column(
+        children: [
+          Text(value, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
+          Text(label, style: TextStyle(fontSize: 12.5, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        ],
+      ),
+    ),
   );
 }
 
@@ -198,21 +223,30 @@ class _FollowButtonState extends ConsumerState<_FollowButton> {
     }
   }
 
+  /// Unfollow, or cancel a pending request (after a confirm).
+  Future<void> _undo() async {
+    final p = widget.profile;
+    if (!await confirmUnfollow(context, p.username, pending: p.youFollow != 1)) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(socialApiProvider).unfollow(p.username);
+      HapticFeedback.lightImpact();
+      ref.read(postsVersionProvider.notifier).bump(); // the feed loses their posts; the profile reloads
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final f = widget.profile.youFollow;
-    if (f == 1) {
+    if (f == 1 || f == 0.5) {
       return OutlinedButton.icon(
-        onPressed: null,
-        icon: const Icon(Icons.check_rounded),
-        label: const Text('Following'),
-      );
-    }
-    if (f == 0.5) {
-      return OutlinedButton.icon(
-        onPressed: null,
-        icon: const Icon(Icons.schedule_rounded),
-        label: const Text('Requested'),
+        onPressed: _busy ? null : _undo,
+        icon: Icon(f == 1 ? Icons.check_rounded : Icons.schedule_rounded),
+        label: Text(f == 1 ? 'Following' : 'Requested'),
       );
     }
     return FilledButton(

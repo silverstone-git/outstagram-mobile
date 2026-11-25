@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/net/api_client.dart';
 import '../streak/streak_api.dart';
 import 'engine/engine.dart';
+import 'offline_packs.dart';
 
 final examApiProvider = Provider<ExamApi>((ref) => ExamApi(ref.watch(apiProvider)));
 
@@ -87,13 +88,16 @@ class ExamApi {
       Question.fromJson(Map<String, dynamic>.from(q as Map)),
   ];
 
-  Future<ExamConfig> preset(ExamPreset p) => generatePresetExam(p, sample);
+  /// Server first; a saved offline pack when there's no connection (offline_packs.dart).
+  TopicSampler get _sampler => offlineAwareSampler(this);
 
-  Future<ExamConfig> practice(String subject) => generatePracticeExam(subject, sample);
+  Future<ExamConfig> preset(ExamPreset p) => generatePresetExam(p, _sampler);
+
+  Future<ExamConfig> practice(String subject) => generatePracticeExam(subject, _sampler);
 
   /// The daily streak quiz: 5 questions from the user's subject, 5 minutes, no negative marking.
   Future<ExamConfig> popQuiz(String subject) async {
-    final p = await generatePracticeExam(subject, sample, count: 5);
+    final p = await generatePracticeExam(subject, _sampler, count: 5);
     return ExamConfig(
       name: 'Pop quiz · $subject',
       sections: p.sections,
@@ -122,7 +126,8 @@ class ExamApi {
     return normalizeExamConfig(ExamConfig.fromJson(json));
   }
 
-  Future<AttemptSummary> saveAttempt(String? examId, ExamResult result, double maxScore) async =>
+  /// [takenAt]: for attempts finished offline and uploaded later (the server keeps up to 7 days back).
+  Future<AttemptSummary> saveAttempt(String? examId, ExamResult result, double maxScore, {DateTime? takenAt}) async =>
       AttemptSummary.fromJson(
         await _api.post<Map<String, dynamic>>(
           '/exam-attempts',
@@ -135,6 +140,7 @@ class ExamApi {
             'total_questions': result.totalQuestions,
             'total_time_seconds': result.totalTimeTaken.round(),
             'result': result.toJson(),
+            if (takenAt != null) 'taken_at': takenAt.toUtc().toIso8601String(),
           },
         ),
       );

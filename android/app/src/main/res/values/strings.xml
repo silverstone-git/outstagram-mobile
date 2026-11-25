@@ -6,4 +6,5 @@
     <string name="shortcut_practice_long">Practice exam</string>
     <string name="shortcut_tutor_short">AI tutor</string>
     <string name="shortcut_tutor_long">AI tutor chats</string>
+    <string name="streak_widget_description">Your daily exam streak at a glance</string>
 </resources>

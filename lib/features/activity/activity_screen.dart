@@ -67,14 +67,17 @@ class _RequestTile extends ConsumerStatefulWidget {
 
 class _RequestTileState extends ConsumerState<_RequestTile> {
   var _busy = false;
-  var _approved = false;
 
-  Future<void> _approve() async {
+  /// null = still pending, else "Approved" / "Declined".
+  String? _outcome;
+
+  Future<void> _answer(bool approve) async {
     setState(() => _busy = true);
     try {
-      await ref.read(socialApiProvider).approve(widget.request.id);
-      HapticFeedback.mediumImpact();
-      setState(() => _approved = true);
+      final api = ref.read(socialApiProvider);
+      await (approve ? api.approve(widget.request.id) : api.reject(widget.request.id));
+      approve ? HapticFeedback.mediumImpact() : HapticFeedback.lightImpact();
+      setState(() => _outcome = approve ? 'Approved' : 'Declined');
     } catch (e) {
       if (mounted) showError(context, e);
     } finally {
@@ -90,13 +93,20 @@ class _RequestTileState extends ConsumerState<_RequestTile> {
       title: Text(r.username, style: const TextStyle(fontWeight: FontWeight.w700)),
       subtitle: Text(r.at == null ? 'wants to follow you' : 'wants to follow you · ${timeAgo(r.at!)}'),
       onTap: () => context.push('/u/${r.username}'),
-      trailing: _approved
-          ? const Chip(label: Text('Approved'))
-          : FilledButton(
-              style: FilledButton.styleFrom(minimumSize: const Size(96, 40)),
-              onPressed: _busy ? null : _approve,
-              child: const Text('Approve'),
-            ),
+      trailing: _outcome != null
+          ? Chip(label: Text(_outcome!))
+          : Row(mainAxisSize: MainAxisSize.min, children: [
+              IconButton(
+                tooltip: 'Decline',
+                onPressed: _busy ? null : () => _answer(false),
+                icon: const Icon(Icons.close_rounded),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(minimumSize: const Size(96, 40)),
+                onPressed: _busy ? null : () => _answer(true),
+                child: const Text('Approve'),
+              ),
+            ]),
     );
   }
 }

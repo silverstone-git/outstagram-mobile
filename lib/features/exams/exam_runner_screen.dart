@@ -25,6 +25,7 @@ class ExamRunnerScreen extends ConsumerStatefulWidget {
 
 class _ExamRunnerScreenState extends ConsumerState<ExamRunnerScreen> with WidgetsBindingObserver {
   late final PageController _pages;
+  late final ExamSessionController _session = ref.read(examSessionProvider.notifier);
   Timer? _tick;
   bool _submitting = false;
   bool _warned = false;
@@ -35,6 +36,7 @@ class _ExamRunnerScreenState extends ConsumerState<ExamRunnerScreen> with Widget
     _pages = PageController(initialPage: ref.read(examSessionProvider)?.index ?? 0);
     WidgetsBinding.instance.addObserver(this);
     WakelockPlus.enable();
+    _session.resumed(); // back in the runner: drop "time running out" alerts
     _tick = Timer.periodic(const Duration(seconds: 1), (_) => _onTick());
     WidgetsBinding.instance.addPostFrameCallback((_) => _onTick());
   }
@@ -42,6 +44,7 @@ class _ExamRunnerScreenState extends ConsumerState<ExamRunnerScreen> with Widget
   @override
   void dispose() {
     _tick?.cancel();
+    _session.leftRunner(); // no-op once submitted/discarded
     WidgetsBinding.instance.removeObserver(this);
     WakelockPlus.disable();
     _pages.dispose();

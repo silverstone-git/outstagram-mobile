@@ -8,13 +8,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+          cache: gradle
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -24,10 +25,95 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - name: Build staging APK (debug-signed)
-        run: flutter build apk --release --flavor staging --dart-define-from-file=config/staging.json
+      # The project's gradle.properties asks for an 8 GB heap (fine locally); on the 16 GB runner Gradle +
+      # the Kotlin daemon + R8 got OOM-killed (exit 143). ~/.gradle/gradle.properties overrides it here.
+      - name: Gradle memory for CI
+        run: |
+          mkdir -p ~/.gradle
+          echo 'org.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g' > ~/.gradle/gradle.properties
+          echo 'kotlin.daemon.jvmargs=-Xmx2g' >> ~/.gradle/gradle.properties
+          echo 'org.gradle.workers.max=2' >> ~/.gradle/gradle.properties
+      - name: Build staging APK (debug-signed, arm64 only; a build check and test artifact)
+        run: flutter build apk --release --flavor staging --dart-define-from-file=config/staging.json --target-platform android-arm64
       - uses: actions/upload-artifact@v4
         with:
           name: outstagram-staging-apk
           path: build/app/outputs/flutter-apk/app-staging-release.apk
           retention-days: 14
+
+  # Friends' download: on every push to main, build the prod APK and REPLACE one fixed object in the bucket
+  # (same key every time, so the bucket only ever holds the latest build). See docs/environments.md
+  # "Friends' APK link". Skipped until the secrets exist.
+  publish-apk:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      HAS_SECRETS: ${{ secrets.ANDROID_SIGNING_KEYSTORE_B64 != '' && secrets.APK_S3_ACCESS_KEY_ID != '' }}
+      APK_KEY: ${{ vars.APK_KEY || 'apps/outstagram.apk' }}
+    steps:
+      - name: Check secrets
+        if: env.HAS_SECRETS != 'true'
+        run: echo "::notice::publish-apk skipped. Set ANDROID_SIGNING_KEYSTORE_B64 and the APK_S3_* secrets (docs/environments.md)."
+      - uses: actions/checkout@v4
+        if: env.HAS_SECRETS == 'true'
+      - uses: actions/setup-java@v4
+        if: env.HAS_SECRETS == 'true'
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: subosito/flutter-action@v2
+        if: env.HAS_SECRETS == 'true'
+        with:
+          channel: stable
+          flutter-version: 3.44.8
+          cache: true
+      # The same key the user's machine signs with, so a CI build installs over a local one (and vice
+      # versa) and Google sign-in keeps working (the Android OAuth client is registered with its SHA-1).
+      - name: Install the signing key
+        if: env.HAS_SECRETS == 'true'
+        run: |
+          mkdir -p ~/.android
+          echo "${{ secrets.ANDROID_SIGNING_KEYSTORE_B64 }}" | base64 -d > ~/.android/debug.keystore
+          keytool -list -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey | grep -E "SHA1:" | sed 's/^/signing /'
+      # The project's gradle.properties asks for an 8 GB heap (fine locally); on the 16 GB runner Gradle +
+      # the Kotlin daemon + R8 got OOM-killed (exit 143). ~/.gradle/gradle.properties overrides it here.
+      - name: Gradle memory for CI
+        if: env.HAS_SECRETS == 'true'
+        run: |
+          mkdir -p ~/.gradle
+          echo 'org.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g' > ~/.gradle/gradle.properties
+          echo 'kotlin.daemon.jvmargs=-Xmx2g' >> ~/.gradle/gradle.properties
+          echo 'org.gradle.workers.max=2' >> ~/.gradle/gradle.properties
+      - name: Build prod APK
+        if: env.HAS_SECRETS == 'true'
+        # build number grows with every run so each download is an update, never a "downgrade"
+        run: |
+          flutter pub get
+          flutter build apk --release --flavor prod --dart-define-from-file=config/prod.json \
+            --build-number=$((1000 + ${{ github.run_number }})) --target-platform android-arm,android-arm64
+      - name: Replace the APK in the bucket
+        if: env.HAS_SECRETS == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.APK_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.APK_S3_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required # R2 rejects the CLI's default CRC checksums
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+          S3_ENDPOINT: ${{ secrets.APK_S3_ENDPOINT }}
+          S3_BUCKET: ${{ secrets.APK_S3_BUCKET }}
+        run: |
+          apk=build/app/outputs/flutter-apk/app-prod-release.apk
+          ls -l "$apk"
+          aws s3 cp "$apk" "s3://$S3_BUCKET/$APK_KEY" --endpoint-url "$S3_ENDPOINT" \
+            --content-type application/vnd.android.package-archive \
+            --content-disposition 'attachment; filename="Outstagram.apk"' \
+            --cache-control "no-cache"
+          # small sidecar so the web page can show which build it is
+          printf '{"build":%d,"commit":"%s","built_at":"%s","bytes":%d}\n' $((1000 + ${{ github.run_number }})) \
+            "${GITHUB_SHA::7}" "$(date -u +%FT%TZ)" "$(stat -c %s "$apk")" > latest.json
+          aws s3 cp latest.json "s3://$S3_BUCKET/${APK_KEY%.apk}.json" --endpoint-url "$S3_ENDPOINT" \
+            --content-type application/json --cache-control "no-cache"
+          echo "::notice::Uploaded build $((1000 + ${{ github.run_number }})) to $APK_KEY"

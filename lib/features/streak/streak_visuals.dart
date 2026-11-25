@@ -136,6 +136,31 @@ class _FlamePainter extends CustomPainter {
 // --- app-bar chip ---------------------------------------------------------------------------------------
 
 /// 🔥 N in the app bar. Pulses when today's quiz is still missing. Opens the streak screen.
+/// A small static flame + day count (friends' list, profiles). Grey when the streak is 0.
+class StreakBadge extends StatelessWidget {
+  const StreakBadge({super.key, required this.days});
+
+  final int days;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final lit = days > 0;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: lit ? Brand.flameOrange.withValues(alpha: 0.16) : cs.surfaceContainerHighest,
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.local_fire_department_rounded, size: 16, color: lit ? Brand.flameOrange : cs.onSurfaceVariant),
+        const SizedBox(width: 3),
+        Text('$days', style: TextStyle(fontWeight: FontWeight.w900, color: lit ? Brand.flameOrange : cs.onSurfaceVariant)),
+      ]),
+    );
+  }
+}
+
 class StreakChip extends StatefulWidget {
   const StreakChip({super.key, required this.status});
 
@@ -361,6 +386,7 @@ class WeekStrip extends StatelessWidget {
             builder: (_) {
               final day = today.subtract(Duration(days: i));
               final done = status.done(day);
+              final frozen = !done && status.frozen(day);
               final isToday = i == 0;
               return Column(
                 mainAxisSize: MainAxisSize.min,
@@ -388,6 +414,16 @@ class WeekStrip extends StatelessWidget {
                         boxShadow: [BoxShadow(color: Brand.flameOrange.withValues(alpha: 0.45), blurRadius: 10)],
                       ),
                       child: Icon(Icons.local_fire_department_rounded, color: Colors.white, size: d * 0.6),
+                    )
+                  else if (frozen)
+                    Container(
+                      width: d,
+                      height: d,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(colors: [Brand.ice, Brand.iceDeep]),
+                      ),
+                      child: Icon(Icons.ac_unit_rounded, color: Colors.white, size: d * 0.55),
                     )
                   else if (isToday)
                     _PulseRing(size: d)
@@ -487,6 +523,7 @@ class StreakCalendar extends StatelessWidget {
                         final day = start.add(Duration(days: w * 7 + i));
                         final future = day.isAfter(today);
                         final done = status.done(day);
+                        final frozen = !done && status.frozen(day);
                         final isToday = day == today;
                         return AspectRatio(
                           aspectRatio: 1,
@@ -500,8 +537,10 @@ class StreakCalendar extends StatelessWidget {
                                       end: Alignment.topRight,
                                       colors: [Brand.flameOrange, Brand.flameMagenta],
                                     )
+                                  : frozen
+                                  ? const LinearGradient(colors: [Brand.ice, Brand.iceDeep])
                                   : null,
-                              color: done ? null : (future ? Colors.transparent : cs.surfaceContainerHighest),
+                              color: done || frozen ? null : (future ? Colors.transparent : cs.surfaceContainerHighest),
                               border: isToday ? Border.all(color: Brand.flameOrange, width: 2) : null,
                             ),
                             alignment: Alignment.center,
@@ -509,8 +548,8 @@ class StreakCalendar extends StatelessWidget {
                               '${day.day}',
                               style: TextStyle(
                                 fontSize: 11,
-                                fontWeight: done || isToday ? FontWeight.w800 : FontWeight.w500,
-                                color: done
+                                fontWeight: done || frozen || isToday ? FontWeight.w800 : FontWeight.w500,
+                                color: done || frozen
                                     ? Colors.white
                                     : (future ? cs.onSurfaceVariant.withValues(alpha: 0.35) : cs.onSurfaceVariant),
                               ),
@@ -524,6 +563,64 @@ class StreakCalendar extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+// --- streak freezes ------------------------------------------------------------------------------------------
+
+/// Freezes held (snowflakes), how the next one is earned, and that they're spent automatically.
+class FreezeCard extends StatelessWidget {
+  const FreezeCard({super.key, required this.status});
+
+  final StreakStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final s = status;
+    final next = s.daysToFreeze;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            for (var i = 0; i < s.freezesMax; i++)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: i < s.freezes ? const LinearGradient(colors: [Brand.ice, Brand.iceDeep]) : null,
+                    color: i < s.freezes ? null : cs.surfaceContainerHighest,
+                  ),
+                  child: Icon(Icons.ac_unit_rounded, size: 20,
+                      color: i < s.freezes ? Colors.white : cs.onSurfaceVariant.withValues(alpha: 0.5)),
+                ),
+              ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    s.freezes == 0 ? 'No streak freezes' : s.freezes == 1 ? '1 streak freeze' : '${s.freezes} streak freezes',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${s.freezes > 0 ? 'A missed day uses one automatically. ' : ''}'
+                    '${next == null ? 'You hold the most you can (${s.freezesMax}).' : 'Next one in $next day${next == 1 ? '' : 's'} (one every ${s.freezeEvery} days).'}',
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

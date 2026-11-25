@@ -104,18 +104,31 @@ class Comment {
 }
 
 class UserSummary {
-  const UserSummary({required this.username, required this.fullname, this.bio, this.avatar});
+  const UserSummary({
+    required this.username,
+    required this.fullname,
+    this.bio,
+    this.avatar,
+    this.youFollow = 0,
+    this.isYou = false,
+  });
 
   final String username;
   final String fullname;
   final String? bio;
   final String? avatar;
 
+  /// Follower/following lists only: 0 none, 0.5 requested, 1 following.
+  final double youFollow;
+  final bool isYou;
+
   factory UserSummary.fromJson(Map<String, dynamic> j) => UserSummary(
         username: j['username'] as String,
         fullname: j['fullname'] as String,
         bio: j['bio'] as String?,
         avatar: j['avatar_url'] as String?,
+        youFollow: (j['you_follow_them'] as num?)?.toDouble() ?? 0,
+        isYou: j['is_you'] == true,
       );
 }
 
@@ -131,6 +144,7 @@ class Profile {
     required this.youFollow,
     required this.theyFollow,
     this.avatar,
+    this.streak = 0,
   });
 
   final String username;
@@ -143,6 +157,9 @@ class Profile {
   final double youFollow;
   final double theyFollow;
 
+  /// Daily exam streak (freezes counted); 0 on older servers.
+  final int streak;
+
   factory Profile.fromJson(Map<String, dynamic> j) => Profile(
         username: j['username'] as String,
         fullname: j['fullname'] as String,
@@ -153,6 +170,7 @@ class Profile {
         youFollow: (j['you_follow_them'] as num).toDouble(),
         theyFollow: (j['they_follow_you'] as num).toDouble(),
         avatar: j['avatar_url'] as String?,
+        streak: (j['streak'] as num?)?.toInt() ?? 0,
       );
 }
 

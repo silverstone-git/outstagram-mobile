@@ -69,21 +69,17 @@ and is rate-limited to a few emails per hour, so it's unusable for friends.
 
 **Optional later:** set a password from the profile (needs `PUT /me/password`); account linking UI.
 
-## 2. Permanent media URLs  ← important, affects web too
+## 2. Media links (decided 2026-11-25)
 
-Posts store presigned R2 URLs that **expire after 7 days**, so images on older posts break (web and app).
-**Mitigated 2026-11-24** (outstagram-server PR #3): listings and post view re-sign stored URLs on read. Still worth
-doing for permanent, CDN-cacheable links:
-- Find the bucket's public address: Cloudflare → R2 → bucket `outstagram` → Settings → Public access
-  (an `r2.dev` subdomain, or connect a custom domain such as `media.aryan.cfd`, which is better: cacheable, no rate limits).
-  The question-image bucket the web uses is `https://pub-682f1a94c94443278f61ec7ca3dadaec.r2.dev`; confirm whether
-  it's the same bucket before reusing it.
-- Set `S3_PUBLIC_BASE_URL=<that origin>` on `outsie` and `outsie-staging`
-  (`gcloud run services update outsie --region asia-northeast1 --update-env-vars S3_PUBLIC_BASE_URL=…`). The server
-  then returns `public_url` and the app already prefers it.
-- Update the web (`outstagram-web/src/services/api.ts` `uploadImages`) to prefer `public_url` too.
-- Backfill: a one-off script that rewrites `mediaurl.url` from presigned → `<base>/<object_key>`
-  (object key = last path segment before `?`). Take a DB backup first; test on staging.
+The `outstagram` bucket is **private by design** (user, 2026-11-25: `pariksha` = public, `outstagram` = private user
+content). Posts store 7-day presigned URLs and the server re-signs them on every read (`media.fresh_media_url`,
+cached per key so a link stays stable for ~3 days), so old images keep working. The app caches images by object path
+(`Avatar.cacheKey`), so re-signed links don't re-download. Don't set `S3_PUBLIC_BASE_URL` for this bucket.
+- [ ] Optional: a stable `GET /media/{key}` on outsie that 302s to a fresh presigned URL, stored instead of the
+      presigned URL at upload time (links never expire in the DB; still unguessable-key access, like presigned links).
+- [x] Question images (public `pariksha` bucket) moved to `https://outsiebucket.aryan.cfd` in web, app and pariksha
+      (2026-11-25) after the r2.dev URL was disabled. The **web needs a redeploy** (`outstagram-web/scripts/preview.sh deploy`
+      on the portfolio box); pariksha too wherever it's served.
 
 ## 3. P3: Exams ✅ (2026-11-24)
 
@@ -144,10 +140,16 @@ per-photo limit follows the plan (`limits.media_bytes`). The button is hidden wh
 ## 6. Social gaps (server + app)
 
 - [x] Profile photo (2026-11-25): `PUT/DELETE /me/avatar`, shown on profiles, posts, comments, search, requests (app + web).
-- Server: unfollow (`DELETE /users/{u}/follow`), reject request, followers/following lists, `PUT /me` (fullname, bio), `/posts/{id}` with counts, delete a comment,
-  "liked by" list UI (`/posts/{id}/likes/{page}` exists).
-- App: profile edit screen, followers/following sheets, post detail route `/p/:id` (for share links), video playback
-  (`video_player`; the card shows a placeholder today), image pinch-zoom, share post (`share_plus`).
+- [x] **Mutual-follow bug** (2026-11-25, server PR #9): approving the second half of a mutual follow 400'd
+      "Friendship already exists", so that request stayed pending (qa_tester1 1 follower / 0 following, cyto the
+      reverse). Fixed; the stuck request goes through when it's approved again from Activity.
+- [x] Social basics (2026-11-25; server PR #9, app branch `feat/social-basics`): unfollow / cancel request (tap
+      Following/Requested), Decline on Activity, followers/following lists (tap the counts; Remove on your own
+      followers), Edit profile (name, bio), long-press to delete a comment (yours, or any on your post),
+      `/p/:id` post page + "Share link" / "Open post" in the post ⋮ menu, tap a photo → full-screen pinch/double-tap
+      zoom, video playback (`video_player`, tap to play, muted until unmuted). Needs on-device QA.
+- [ ] Web: same features (unfollow, decline, lists, edit profile, delete comment) and a `/p/<id>` page (also needed for App Links).
+- [ ] "liked by" list UI (`/posts/{id}/likes/{page}` exists).
 
 ## 7. P6: Mobile extras (`PLAN.md` §5)
 
@@ -162,16 +164,36 @@ Next, needs the user:
       apps registered (`com.cyto.outstagram`, `.staging`) → `google-services.json` per flavor. Then server: `POST /me/devices`,
       a `devicetoken` table (re-run supabase-lockdown.sql), sends on follow request/approval/like/comment via FCM HTTP v1
       (service account on Cloud Run); app: `firebase_messaging`, notification permission (Android 13+), tap → deep link.
-- [ ] **App Links** for post/profile URLs: `https://aryan.cfd/.well-known/assetlinks.json` at the **domain root** (portfolio
-      server, not this repo) with the signing SHA-256; post detail route `/p/:id` first (`docs/TODO.md` §6).
+- [x] **App Links** (2026-11-25): share links are `https://aryan.cfd/outstagram/p/?id=<post>` and `/u/?name=<user>`
+      (real folders on the static host; the web opens the post, outstagram-web PR #7). The manifest claims
+      `/outstagram/p` + `/outstagram/u` with `autoVerify`; `router.dart` `appLinkTarget` maps them to `/p/:id`, `/u/:name`.
+- [ ] **Upload `android/assetlinks.json` to `https://aryan.cfd/.well-known/assetlinks.json`** (portfolio box, domain
+      root, `Content-Type: application/json`, no redirect). Both package names, debug-key SHA-256. Until then Android
+      shows a chooser / opens the browser. Check: `adb shell pm verify-app-links --re-verify com.cyto.outstagram`, then
+      `adb shell pm get-app-links com.cyto.outstagram`. Add the Play app-signing SHA-256 at release (P7).
+- [ ] Web: profile page for `/u/?name=` (the web has no other-user profile view yet; the link opens the app or the web home).
 - [x] **Daily streak** (2026-11-25): any finished exam with an answer counts the day (user's time zone); 5-question
       pop quizzes from the chosen subject; streak screen (flame, week strip, 6-week calendar, milestones, 250-day reward
       card), chips in the Feed/Exams app bars, full-screen celebration with confetti; local reminders at the chosen time,
       21:00 and 22:30 on at-risk days, come-back messages after. 250 days = 60 AI prompts/hour + 1000 saved chats for good.
-- [ ] Streak ideas for later: streak freeze (skip one day), friends' streaks on profiles, a home-screen widget.
-- [ ] Local notifications: "5 minutes left" when leaving a running exam; "your tutor is back" when the quota resets
-      (flutter_local_notifications is in now; reuse `StreakReminders`' plugin instance).
-- [ ] Offline exam packs, home-screen widget, video posts in share-target.
+- [x] **Streak extras** (2026-11-25, server PR #10): freezes (earn 1 per 7 streak days, hold 2, a missed day uses
+      one automatically; frozen days are blue in the strip/calendar; the hero says when one saved you), friends'
+      streaks on `/streak` (`GET /me/streak/friends`), a streak badge on profiles (`streak` on `GET /users/{u}`),
+      a **home-screen widget** (`StreakWidgetProvider.kt` + `streak_widget.dart`, home_widget; it works out
+      done/at-risk/ended from the last day itself and refreshes every 30 min; tap → `/streak`).
+- [x] **Local alerts** (2026-11-25, `streak/local_alerts.dart`): leaving a running exam (background or Save and exit)
+      schedules "about 5 minutes left" (exams > 10 min) and "time's up"; back in the runner / finished cancels them.
+      Running out of tutor messages schedules "your AI tutor is back" at `resets_at`. Exact alarms only if Android
+      already allows them, else inexact (may come late). Need notification permission (asked by streak reminders).
+- [x] **Offline exam packs** (2026-11-25, `exams/offline_packs.dart`, `/exams/offline` from the Exams app bar):
+      save a subject (40 questions per topic) as JSON in app documents; quick practice, pop quizzes and mocks fall back
+      to packs on network errors (`offlineAwareSampler`). Attempts that can't be saved offline wait in
+      `PendingAttempts` (shared_preferences) and upload on launch/resume/next save with `taken_at` (server PR #11,
+      ≤7 days) so the streak counts the right day. Question images still need a connection.
+- [x] **Videos via share-target and the composer** (2026-11-25): `video/*` SEND/SEND_MULTIPLE, a Video tile in the
+      composer; uploaded as they are (no transcoding), so they must fit the plan's per-file limit (free 200 kB,
+      Pro 15 MB); too big → the upgrade sheet for free users. Later: on-device compression (e.g. `video_compress`).
+- [ ] On-device QA of all of the above (widget on the S22 home screen, an alert firing, airplane-mode practice + upload).
 
 ## 8. P7: Release to Play
 
@@ -189,6 +211,8 @@ app icon and splash done 2026-11-24 (vector, from the new logo kit); Play needs 
 
 - Delete unused platform folders (`ios/ linux/ macos/ windows/ web/`) or keep them deliberately.
 - Remove `build_runner` from dev deps if codegen is never adopted.
-- Add a prod-APK artifact (or GitHub Release) job to CI, signed consistently, so friends can download builds.
+- [x] CI job `publish-apk` (2026-11-25): pushes to `main` build the prod APK and **replace** `apps/outstagram.apk`
+      in the public `pariksha` bucket (one object, overwritten). Needs the secrets in `docs/environments.md` → "Friends' APK link".
+- [ ] Point the web landing's `APPS.androidApk` (`outstagram-web/src/features/public/routes.ts`, now a Drive link) at `https://outsiebucket.aryan.cfd/apps/outstagram.apk` once the first upload exists.
 - Add the mobile app to the cross-project roadmap in `outstagram-web/TODO.md`.
 - Upgrade plugins that warn about "Built-in Kotlin" when new versions exist (build output lists them).

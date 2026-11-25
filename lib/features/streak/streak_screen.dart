@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
 import '../../core/net/api_error.dart';
+import '../../core/ui/avatar.dart';
 import '../../core/ui/feedback.dart';
 import '../exams/engine/engine.dart';
 import '../exams/exam_api.dart';
@@ -178,8 +179,13 @@ class _StreakScreenState extends ConsumerState<StreakScreen> {
                         child: WeekStrip(status: s),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    FreezeCard(status: s),
                     const SizedBox(height: 16),
                     RewardCard(status: s),
+                    const SizedBox(height: 24),
+                    const _Title('Friends'),
+                    const _FriendsStreaks(),
                     const SizedBox(height: 24),
                     const _Title('Milestones'),
                     MilestoneRow(status: s),
@@ -239,13 +245,51 @@ class _StreakScreenState extends ConsumerState<StreakScreen> {
                     const SizedBox(height: 12),
                     Text(
                       'Finish any exam with at least one answer to count the day: a pop quiz, practice, a mock or a '
-                      'community exam. Days follow your phone\'s time zone. Miss a day and the streak starts over; '
+                      'community exam. Days follow your phone\'s time zone. Miss a day and the streak starts over unless '
+                      'a streak freeze covers it (one every ${s.freezeEvery} days, up to ${s.freezesMax}); '
                       'the ${s.reward.goal}-day reward stays once you earn it.',
                       style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12.5),
                     ),
                   ],
                 ),
               ),
+      ),
+    );
+  }
+}
+
+/// You and the people you follow, longest streak first.
+class _FriendsStreaks extends ConsumerWidget {
+  const _FriendsStreaks();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final friends = ref.watch(friendStreaksProvider);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: friends.when(
+        loading: () => const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator())),
+        error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text(ApiException.from(e).message)),
+        data: (list) {
+          final others = list.where((f) => !f.isYou).length;
+          return Column(children: [
+            for (final f in list)
+              ListTile(
+                dense: true,
+                leading: Avatar(name: f.username, url: f.avatar, radius: 18),
+                title: Text(f.isYou ? 'You' : f.username, style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: f.todayDone ? const Text('Done today') : null,
+                onTap: f.isYou ? null : () => context.push('/u/${f.username}'),
+                trailing: StreakBadge(days: f.streak),
+              ),
+            if (others == 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+                child: Text('Follow friends to see their streaks here.', style: TextStyle(color: cs.onSurfaceVariant)),
+              ),
+          ]);
+        },
       ),
     );
   }
@@ -282,7 +326,9 @@ class _Hero extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = status;
     final lit = s.current > 0;
-    final (headline, sub) = s.todayDone
+    final (headline, sub) = s.freezesUsed > 0 && !s.todayDone
+        ? ('A freeze saved your streak ❄️', '${s.freezesUsed == 1 ? 'Yesterday was' : '${s.freezesUsed} missed days were'} covered, so all ${s.current} days are safe. Do today\'s quiz to keep going.')
+        : s.todayDone
         ? ('You\'re on fire!', 'Today is done. Come back tomorrow to make it ${s.current + 1}.')
         : s.atRisk
         ? ('Your streak is at risk', '${_timeLeft(s.dayEndsAt)}. One 5-question quiz keeps all ${s.current} days.')

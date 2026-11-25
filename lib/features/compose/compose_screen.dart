@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import '../account/account_api.dart';
 import '../account/account_screen.dart';
 import 'package:flutter/material.dart';
@@ -24,11 +26,23 @@ class PostsVersion extends Notifier<int> {
   void bump() => state++;
 }
 
+/// A compressed photo (bytes) or a video file (path), in the order they'll be posted.
 class _Picked {
-  _Picked(this.bytes);
+  _Picked(Uint8List this.bytes)
+      : videoPath = null,
+        videoSize = 0;
 
-  final Uint8List bytes;
+  _Picked.video(String this.videoPath, this.videoSize) : bytes = null;
+
+  final Uint8List? bytes;
+  final String? videoPath;
+  final int videoSize;
+
+  bool get isVideo => videoPath != null;
 }
+
+const _videoMime = {'mp4': 'video/mp4', 'mov': 'video/quicktime', 'webm': 'video/webm', 'mkv': 'video/x-matroska',
+    'm4v': 'video/x-m4v', '3gp': 'video/3gpp'};
 
 class ComposeScreen extends ConsumerStatefulWidget {
   const ComposeScreen({super.key});
@@ -65,13 +79,16 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   Future<void> _applyDraft(ComposeDraft d) async {
     if (!mounted || d.isEmpty) return;
     setState(() {
-      if (d.images.isNotEmpty) _images.clear();
+      if (d.images.isNotEmpty || d.videos.isNotEmpty) _images.clear();
       if (d.caption != null && d.caption!.trim().isNotEmpty) {
         _caption.text = d.caption!.trim();
         _caption.selection = TextSelection.collapsed(offset: _caption.text.length);
       }
       if (d.category != null) _category = d.category!;
     });
+    for (final v in d.videos) {
+      await _addVideo(v);
+    }
     if (d.images.isEmpty) return;
     setState(() => _compressing = true);
     final max = await _maxBytes();
@@ -146,6 +163,29 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     }
   }
 
+  Future<void> _pickVideo() async {
+    if (_images.length >= _maxImages) return;
+    final f = await _picker.pickVideo(source: ImageSource.gallery);
+    if (f != null) await _addVideo(f.path);
+  }
+
+  /// Videos are uploaded as they are, so they must fit the plan's per-file limit (free 200 kB, Pro 15 MB).
+  Future<void> _addVideo(String path) async {
+    if (_images.length >= _maxImages || !mounted) return;
+    final size = await File(path).length();
+    final max = await _maxBytes();
+    if (!mounted) return;
+    if (size > max) {
+      final pro = ref.read(billingStatusProvider).value?.isPro ?? false;
+      final msg = 'This video is ${fmtBytes(size)}; videos are posted as they are and your plan allows '
+          '${fmtBytes(max)} per file.${pro ? ' Trim it in your gallery first.' : ''}';
+      showError(context, ApiException(msg, status: 413, code: 'media_too_large',
+          detail: {'code': 'media_too_large', 'message': msg, 'upgrade': !pro, 'size': size, 'limit': max}));
+      return;
+    }
+    setState(() => _images.add(_Picked.video(path, size)));
+  }
+
   void _addTag(String tag) {
     final t = '#$tag';
     if (_caption.text.contains(t)) return;
@@ -164,10 +204,21 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
       final api = ref.read(socialApiProvider);
       var media = <Map<String, String>>[];
       if (_images.isNotEmpty) {
-        media = await api.upload([
-          for (var i = 0; i < _images.length; i++)
-            UploadFile(bytes: _images[i].bytes, filename: 'photo_$i.webp', mime: 'image/webp'),
-        ], onProgress: (p) => mounted ? setState(() => _progress = p * 0.9) : null);
+        final files = <UploadFile>[];
+        for (var i = 0; i < _images.length; i++) {
+          final m = _images[i];
+          if (m.isVideo) {
+            final ext = m.videoPath!.split('.').last.toLowerCase();
+            files.add(UploadFile(
+              bytes: await File(m.videoPath!).readAsBytes(),
+              filename: 'video_$i.${_videoMime.containsKey(ext) ? ext : 'mp4'}',
+              mime: _videoMime[ext] ?? 'video/mp4',
+            ));
+          } else {
+            files.add(UploadFile(bytes: m.bytes!, filename: 'photo_$i.webp', mime: 'image/webp'));
+          }
+        }
+        media = await api.upload(files, onProgress: (p) => mounted ? setState(() => _progress = p * 0.9) : null);
       }
       await api.createPost(media: media, caption: _caption.text.trim(), category: _category);
       HapticFeedback.heavyImpact();
@@ -231,7 +282,9 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(14),
-                          child: Image.memory(_images[i].bytes, width: 132, height: 132, fit: BoxFit.cover),
+                          child: _images[i].isVideo
+                              ? _VideoTile(size: _images[i].videoSize)
+                              : Image.memory(_images[i].bytes!, width: 132, height: 132, fit: BoxFit.cover),
                         ),
                         Positioned(
                           top: 4,
@@ -261,6 +314,13 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                     label: 'Camera',
                     busy: false,
                     onTap: () => _pick(ImageSource.camera),
+                  ),
+                  const SizedBox(width: 8),
+                  _PickTile(
+                    icon: Icons.video_library_outlined,
+                    label: 'Video',
+                    busy: false,
+                    onTap: _pickVideo,
                   ),
                 ],
               ],
@@ -308,13 +368,31 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Photos are compressed on your phone (WebP, ≤${fmtBytes(ref.watch(billingStatusProvider).value?.limits.mediaBytes ?? Limits.free.mediaBytes)} each) before upload.',
+            'Photos are compressed on your phone (WebP, ≤${fmtBytes(ref.watch(billingStatusProvider).value?.limits.mediaBytes ?? Limits.free.mediaBytes)} each) before upload. Videos are posted as they are and must fit the same limit.',
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
         ],
       ),
     );
   }
+}
+
+class _VideoTile extends StatelessWidget {
+  const _VideoTile({required this.size});
+
+  final int size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 132,
+        height: 132,
+        color: Colors.black87,
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 40),
+          const SizedBox(height: 6),
+          Text('Video · ${fmtBytes(size)}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+        ]),
+      );
 }
 
 class _PickTile extends StatelessWidget {

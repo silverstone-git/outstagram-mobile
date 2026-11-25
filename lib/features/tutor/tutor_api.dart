@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/net/api_client.dart';
 import '../../core/net/api_error.dart';
+import '../streak/local_alerts.dart';
 import 'models.dart';
 import 'sse.dart';
 
@@ -28,14 +29,16 @@ class QuotaNotifier extends Notifier<Quota?> {
 
   Future<void> refresh() async {
     try {
-      state = await ref.read(tutorApiProvider).quota();
+      set(await ref.read(tutorApiProvider).quota());
     } catch (_) {
       // the pill just stays hidden
     }
   }
 
   void set(Quota? q) {
-    if (q != null) state = q;
+    if (q == null) return;
+    state = q;
+    TutorAlerts.sync(q); // "your tutor is back" when the hour resets after running out
   }
 }
 
