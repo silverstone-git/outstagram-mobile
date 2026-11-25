@@ -225,7 +225,7 @@ class _StreakScreenState extends ConsumerState<StreakScreen> {
                             ListTile(
                               leading: const Icon(Icons.schedule_rounded),
                               title: const Text('Remind me at'),
-                              subtitle: const Text('Plus 21:30 and 23:00 if the streak is about to end'),
+                              subtitle: const Text('Plus 21:00 and 22:30 if the streak is about to end'),
                               trailing: Text(
                                 _time?.format(context) ?? '',
                                 style: const TextStyle(fontWeight: FontWeight.w800),

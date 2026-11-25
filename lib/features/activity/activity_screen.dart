@@ -86,7 +86,7 @@ class _RequestTileState extends ConsumerState<_RequestTile> {
   Widget build(BuildContext context) {
     final r = widget.request;
     return ListTile(
-      leading: Avatar(name: r.username, radius: 22),
+      leading: Avatar(name: r.username, url: r.avatar, radius: 22),
       title: Text(r.username, style: const TextStyle(fontWeight: FontWeight.w700)),
       subtitle: Text(r.at == null ? 'wants to follow you' : 'wants to follow you · ${timeAgo(r.at!)}'),
       onTap: () => context.push('/u/${r.username}'),

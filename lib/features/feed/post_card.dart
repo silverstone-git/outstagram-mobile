@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../profile/profile_view.dart' show profileProvider;
 import '../../core/auth/auth_controller.dart';
 import '../../core/ui/avatar.dart';
 import '../../core/ui/feedback.dart';
@@ -85,6 +86,7 @@ class _PostCardState extends ConsumerState<PostCard> with SingleTickerProviderSt
     try {
       await ref.read(socialApiProvider).deletePost(p.id);
       widget.onDeleted?.call();
+      ref.invalidate(profileProvider(p.author)); // the post count
     } catch (e) {
       if (mounted) showError(context, e);
     }
@@ -101,7 +103,7 @@ class _PostCardState extends ConsumerState<PostCard> with SingleTickerProviderSt
       Padding(
         padding: const EdgeInsets.fromLTRB(14, 10, 4, 8),
         child: Row(children: [
-          GestureDetector(onTap: () => context.push('/u/${p.author}'), child: Avatar(name: p.author)),
+          GestureDetector(onTap: () => context.push('/u/${p.author}'), child: Avatar(name: p.author, url: p.authorAvatar)),
           const SizedBox(width: 10),
           Expanded(
             child: GestureDetector(

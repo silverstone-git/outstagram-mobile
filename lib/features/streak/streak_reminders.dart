@@ -13,7 +13,8 @@ import 'streak_api.dart';
 ///
 /// Each time the app learns the streak (launch, resume, finished exam) it cancels the old plan and
 /// schedules a new one: on the next day the streak is at risk, a nudge at the chosen time, then
-/// "ends at midnight" at 21:30 and a last call at 23:00. The days after that get come-back messages
+/// "ends at midnight" at 21:00 and a last call at 22:30 (Android may deliver inexact alarms up to an
+/// hour late, so neither text names an exact time left). The days after that get come-back messages
 /// in case the app isn't opened (by then the streak would have ended).
 class StreakReminders {
   StreakReminders._();
@@ -153,9 +154,9 @@ class StreakReminders {
     final n = s.current; // still alive on riskDay (it was done today or yesterday), or 0
     final main = on(riskDay, t.hour, t.minute);
     await at(main, StreakCopy.nudge(n, s));
-    final evening = on(riskDay, 21, 30);
+    final evening = on(riskDay, 21, 0);
     if (evening.isAfter(main.add(const Duration(minutes: 30)))) await at(evening, StreakCopy.evening(n, s));
-    final last = on(riskDay, 23, 0);
+    final last = on(riskDay, 22, 30);
     if (n > 0 && last.isAfter(main.add(const Duration(minutes: 30)))) await at(last, StreakCopy.lastCall(n));
 
     // If the app isn't opened, the streak ends at riskDay's midnight: come-back messages after that.
@@ -215,10 +216,10 @@ abstract final class StreakCopy {
 
   static StreakNudge evening(int n, StreakStatus s) => n == 0
       ? const StreakNudge('Still time for day 1 ⏳', 'A 5-question pop quiz before midnight starts your streak.')
-      : StreakNudge('⏳ Your $n-day streak ends at midnight', '2½ hours left. One quick quiz saves it.');
+      : StreakNudge('⏳ Your $n-day streak ends at midnight', 'A few hours left. One quick quiz saves it.');
 
   static StreakNudge lastCall(int n) => StreakNudge(
-    '🚨 Last call: $n-day streak ends in 60 minutes',
+    '🚨 Last call: your $n-day streak ends at midnight',
     'Tap now, answer 5 questions, keep your flame burning.',
   );
 

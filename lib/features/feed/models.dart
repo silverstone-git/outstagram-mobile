@@ -54,10 +54,12 @@ class Post {
     required this.isLiked,
     required this.likeCount,
     required this.commentCount,
+    this.authorAvatar,
   });
 
   final String id;
   final String author;
+  final String? authorAvatar;
   final int authorId;
   final String caption;
   final PostCategory? category;
@@ -79,14 +81,16 @@ class Post {
         isLiked: j['is_liked'] == true,
         likeCount: (j['like_count'] as int?) ?? 0,
         commentCount: (j['comment_count'] as int?) ?? 0,
+        authorAvatar: j['author_avatar_url'] as String?,
       );
 }
 
 class Comment {
-  const Comment({required this.id, required this.author, required this.content, required this.at});
+  const Comment({required this.id, required this.author, required this.content, required this.at, this.authorAvatar});
 
   final int id;
   final String author;
+  final String? authorAvatar;
   final String content;
   final DateTime at;
 
@@ -94,19 +98,25 @@ class Comment {
         id: j['comment_id'] as int,
         author: (j['author'] as String?) ?? 'someone',
         content: j['content'] as String,
+        authorAvatar: j['author_avatar_url'] as String?,
         at: DateTime.parse(_asUtc(j['datetime_commented'] as String)).toLocal(),
       );
 }
 
 class UserSummary {
-  const UserSummary({required this.username, required this.fullname, this.bio});
+  const UserSummary({required this.username, required this.fullname, this.bio, this.avatar});
 
   final String username;
   final String fullname;
   final String? bio;
+  final String? avatar;
 
-  factory UserSummary.fromJson(Map<String, dynamic> j) =>
-      UserSummary(username: j['username'] as String, fullname: j['fullname'] as String, bio: j['bio'] as String?);
+  factory UserSummary.fromJson(Map<String, dynamic> j) => UserSummary(
+        username: j['username'] as String,
+        fullname: j['fullname'] as String,
+        bio: j['bio'] as String?,
+        avatar: j['avatar_url'] as String?,
+      );
 }
 
 /// `GET /users/{username}`. Follow fields: 0 none, 0.5 requested, 1 following.
@@ -120,9 +130,11 @@ class Profile {
     required this.following,
     required this.youFollow,
     required this.theyFollow,
+    this.avatar,
   });
 
   final String username;
+  final String? avatar;
   final String fullname;
   final String? bio;
   final int posts;
@@ -140,19 +152,22 @@ class Profile {
         following: j['following_count'] as int,
         youFollow: (j['you_follow_them'] as num).toDouble(),
         theyFollow: (j['they_follow_you'] as num).toDouble(),
+        avatar: j['avatar_url'] as String?,
       );
 }
 
 class FollowRequest {
-  const FollowRequest({required this.id, required this.username, required this.at});
+  const FollowRequest({required this.id, required this.username, required this.at, this.avatar});
 
   final int id;
   final String username;
+  final String? avatar;
   final DateTime? at;
 
   factory FollowRequest.fromJson(Map<String, dynamic> j) => FollowRequest(
         id: j['request_id'] as int,
         username: j['requester_username'] as String,
+        avatar: j['requester_avatar_url'] as String?,
         at: j['datetime_requested'] == null ? null : DateTime.tryParse(_asUtc(j['datetime_requested'] as String))?.toLocal(),
       );
 }

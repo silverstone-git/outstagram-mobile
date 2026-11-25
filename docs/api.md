@@ -38,6 +38,7 @@ See `docs/auth.md`. `POST /login` is **form-encoded** (the `username` field also
 | `GET /me` | `{user_id, username, fullname, bio, email, email_verified, email_verified_at, verification_required}` |
 | `POST /me/email/verify/start` → `POST /me/email/verify {code}` | confirm the current email; returns `/me` |
 | `POST /me/email/change/start {email}` → `POST /me/email/change {email, code}` | 409 if another account has it; the new email counts as confirmed; returns `/me` |
+| `PUT /me/avatar` (multipart `file`) / `DELETE /me/avatar` | profile photo; any image, server crops a 512 px square WebP; needs a confirmed email (403 otherwise). `avatar_url` comes back on `/me`, `GET /users/{u}`, search results; `author_avatar_url` on posts and comments; `requester_avatar_url` on follow requests |
 | `POST /register` | now 409 with a readable `detail` for a taken username or email (was a 500) |
 
 ## Social (implemented in the app)

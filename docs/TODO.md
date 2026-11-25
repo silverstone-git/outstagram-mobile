@@ -142,8 +142,8 @@ per-photo limit follows the plan (`limits.media_bytes`). The button is hidden wh
 
 ## 6. Social gaps (server + app)
 
-- Server: unfollow (`DELETE /users/{u}/follow`), reject request, followers/following lists, `PUT /me` (fullname, bio),
-  profile photo (upload + `avatar_url` column), `/posts/{id}` with counts, delete a comment,
+- [x] Profile photo (2026-11-25): `PUT/DELETE /me/avatar`, shown on profiles, posts, comments, search, requests (app + web).
+- Server: unfollow (`DELETE /users/{u}/follow`), reject request, followers/following lists, `PUT /me` (fullname, bio), `/posts/{id}` with counts, delete a comment,
   "liked by" list UI (`/posts/{id}/likes/{page}` exists).
 - App: profile edit screen, followers/following sheets, post detail route `/p/:id` (for share links), video playback
   (`video_player`; the card shows a placeholder today), image pinch-zoom, share post (`share_plus`).
@@ -166,7 +166,7 @@ Next, needs the user:
 - [x] **Daily streak** (2026-11-25): any finished exam with an answer counts the day (user's time zone); 5-question
       pop quizzes from the chosen subject; streak screen (flame, week strip, 6-week calendar, milestones, 250-day reward
       card), chips in the Feed/Exams app bars, full-screen celebration with confetti; local reminders at the chosen time,
-      21:30 and 23:00 on at-risk days, come-back messages after. 250 days = 60 AI prompts/hour + 1000 saved chats for good.
+      21:00 and 22:30 on at-risk days, come-back messages after. 250 days = 60 AI prompts/hour + 1000 saved chats for good.
 - [ ] Streak ideas for later: streak freeze (skip one day), friends' streaks on profiles, a home-screen widget.
 - [ ] Local notifications: "5 minutes left" when leaving a running exam; "your tutor is back" when the quota resets
       (flutter_local_notifications is in now; reuse `StreakReminders`' plugin instance).

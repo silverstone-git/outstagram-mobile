@@ -129,7 +129,7 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                               Navigator.of(context).pop(_added);
                               context.push('/u/${c.author}');
                             },
-                            child: Avatar(name: c.author, radius: 16),
+                            child: Avatar(name: c.author, url: c.authorAvatar, radius: 16),
                           ),
                           title: Text.rich(TextSpan(children: [
                             TextSpan(text: '${c.author}  ', style: const TextStyle(fontWeight: FontWeight.w700)),

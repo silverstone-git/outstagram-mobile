@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/net/api_client.dart';
 import '../account/account_api.dart';
+import 'profile_photo.dart';
 import '../account/account_screen.dart';
 import '../../core/net/api_error.dart';
 import '../../core/ui/avatar.dart';
@@ -15,9 +16,10 @@ import '../feed/models.dart';
 import '../feed/post_list.dart';
 import '../feed/social_api.dart';
 
-final profileProvider = FutureProvider.autoDispose.family<Profile, String>(
-  (ref, username) => ref.watch(socialApiProvider).profile(username),
-);
+final profileProvider = FutureProvider.autoDispose.family<Profile, String>((ref, username) {
+  ref.watch(postsVersionProvider); // a new or deleted post changes the counts
+  return ref.watch(socialApiProvider).profile(username);
+});
 
 /// `GET /me/stats` (counted server-side).
 final myStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
@@ -68,7 +70,9 @@ class _Header extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Avatar(name: p.username, radius: 38),
+                isMe
+                    ? ProfilePhotoButton(name: p.username, url: p.avatar)
+                    : Avatar(name: p.username, url: p.avatar, radius: 38),
                 const SizedBox(width: 18),
                 Expanded(
                   child: Row(
