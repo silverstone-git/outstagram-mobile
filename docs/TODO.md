@@ -164,16 +164,36 @@ Next, needs the user:
       apps registered (`com.cyto.outstagram`, `.staging`) → `google-services.json` per flavor. Then server: `POST /me/devices`,
       a `devicetoken` table (re-run supabase-lockdown.sql), sends on follow request/approval/like/comment via FCM HTTP v1
       (service account on Cloud Run); app: `firebase_messaging`, notification permission (Android 13+), tap → deep link.
-- [ ] **App Links** for post/profile URLs: `https://aryan.cfd/.well-known/assetlinks.json` at the **domain root** (portfolio
-      server, not this repo) with the signing SHA-256; post detail route `/p/:id` first (`docs/TODO.md` §6).
+- [x] **App Links** (2026-11-25): share links are `https://aryan.cfd/outstagram/p/?id=<post>` and `/u/?name=<user>`
+      (real folders on the static host; the web opens the post, outstagram-web PR #7). The manifest claims
+      `/outstagram/p` + `/outstagram/u` with `autoVerify`; `router.dart` `appLinkTarget` maps them to `/p/:id`, `/u/:name`.
+- [ ] **Upload `android/assetlinks.json` to `https://aryan.cfd/.well-known/assetlinks.json`** (portfolio box, domain
+      root, `Content-Type: application/json`, no redirect). Both package names, debug-key SHA-256. Until then Android
+      shows a chooser / opens the browser. Check: `adb shell pm verify-app-links --re-verify com.cyto.outstagram`, then
+      `adb shell pm get-app-links com.cyto.outstagram`. Add the Play app-signing SHA-256 at release (P7).
+- [ ] Web: profile page for `/u/?name=` (the web has no other-user profile view yet; the link opens the app or the web home).
 - [x] **Daily streak** (2026-11-25): any finished exam with an answer counts the day (user's time zone); 5-question
       pop quizzes from the chosen subject; streak screen (flame, week strip, 6-week calendar, milestones, 250-day reward
       card), chips in the Feed/Exams app bars, full-screen celebration with confetti; local reminders at the chosen time,
       21:00 and 22:30 on at-risk days, come-back messages after. 250 days = 60 AI prompts/hour + 1000 saved chats for good.
-- [ ] Streak ideas for later: streak freeze (skip one day), friends' streaks on profiles, a home-screen widget.
-- [ ] Local notifications: "5 minutes left" when leaving a running exam; "your tutor is back" when the quota resets
-      (flutter_local_notifications is in now; reuse `StreakReminders`' plugin instance).
-- [ ] Offline exam packs, home-screen widget, video posts in share-target.
+- [x] **Streak extras** (2026-11-25, server PR #10): freezes (earn 1 per 7 streak days, hold 2, a missed day uses
+      one automatically; frozen days are blue in the strip/calendar; the hero says when one saved you), friends'
+      streaks on `/streak` (`GET /me/streak/friends`), a streak badge on profiles (`streak` on `GET /users/{u}`),
+      a **home-screen widget** (`StreakWidgetProvider.kt` + `streak_widget.dart`, home_widget; it works out
+      done/at-risk/ended from the last day itself and refreshes every 30 min; tap → `/streak`).
+- [x] **Local alerts** (2026-11-25, `streak/local_alerts.dart`): leaving a running exam (background or Save and exit)
+      schedules "about 5 minutes left" (exams > 10 min) and "time's up"; back in the runner / finished cancels them.
+      Running out of tutor messages schedules "your AI tutor is back" at `resets_at`. Exact alarms only if Android
+      already allows them, else inexact (may come late). Need notification permission (asked by streak reminders).
+- [x] **Offline exam packs** (2026-11-25, `exams/offline_packs.dart`, `/exams/offline` from the Exams app bar):
+      save a subject (40 questions per topic) as JSON in app documents; quick practice, pop quizzes and mocks fall back
+      to packs on network errors (`offlineAwareSampler`). Attempts that can't be saved offline wait in
+      `PendingAttempts` (shared_preferences) and upload on launch/resume/next save with `taken_at` (server PR #11,
+      ≤7 days) so the streak counts the right day. Question images still need a connection.
+- [x] **Videos via share-target and the composer** (2026-11-25): `video/*` SEND/SEND_MULTIPLE, a Video tile in the
+      composer; uploaded as they are (no transcoding), so they must fit the plan's per-file limit (free 200 kB,
+      Pro 15 MB); too big → the upgrade sheet for free users. Later: on-device compression (e.g. `video_compress`).
+- [ ] On-device QA of all of the above (widget on the S22 home screen, an alert firing, airplane-mode practice + upload).
 
 ## 8. P7: Release to Play
 

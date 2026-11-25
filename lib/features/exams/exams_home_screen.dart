@@ -69,6 +69,11 @@ class _ExamsHomeScreenState extends ConsumerState<ExamsHomeScreen> {
         actions: [
           StreakChip(status: ref.watch(streakProvider).value),
           IconButton(
+            tooltip: 'Offline packs',
+            icon: const Icon(Icons.offline_pin_outlined),
+            onPressed: () => context.push('/exams/offline'),
+          ),
+          IconButton(
             tooltip: 'Tutor library',
             icon: const Icon(Icons.auto_awesome_outlined),
             onPressed: () => context.push('/tutor'),

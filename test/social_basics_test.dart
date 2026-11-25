@@ -87,7 +87,7 @@ void main() {
 
   test('post links point at the web /p/<id> page', () {
     final p = Post.fromJson({'post_id': 'abc', 'author': 'a', 'author_user_id': 1, 'datetime_posted': '2026-11-25T10:00:00'});
-    expect(postLink(p), endsWith('/p/abc'));
+    expect(postLink(p), endsWith('/p/?id=abc'));
   });
 
   testWidgets('edit profile: an empty name is refused before any request', (tester) async {

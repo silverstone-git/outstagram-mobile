@@ -35,16 +35,27 @@
                 <action android:name="android.intent.action.SEND"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="image/*"/>
+                <data android:mimeType="video/*"/>
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND_MULTIPLE"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="image/*"/>
+                <data android:mimeType="video/*"/>
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="text/plain"/>
+            </intent-filter>
+            <!-- App Links: post and profile share links open here (router.dart maps them). Verified through
+                 https://aryan.cfd/.well-known/assetlinks.json (android/assetlinks.json, docs/environments.md). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="aryan.cfd" android:pathPrefix="/outstagram/p"/>
+                <data android:pathPrefix="/outstagram/u"/>
             </intent-filter>
             <!-- Launcher shortcuts (long-press the icon); they open app routes via Flutter deep linking -->
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts"/>
@@ -61,6 +72,13 @@
             </intent-filter>
         </activity>
         <!-- flutter_local_notifications: scheduled streak reminders and their "Start quiz" action -->
+        <!-- Home-screen streak widget (StreakWidgetProvider.kt, lib/features/streak/streak_widget.dart) -->
+        <receiver android:name=".StreakWidgetProvider" android:exported="false" android:label="Streak">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/streak_widget_info" />
+        </receiver>
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
             <intent-filter>

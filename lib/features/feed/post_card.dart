@@ -324,8 +324,12 @@ class _Caption extends StatelessWidget {
   }
 }
 
-/// The post's web link (`<WEB_BASE>/p/<id>`); the app opens it at `/p/:id`.
-String postLink(Post p) => '${Env.webBase}/p/${p.id}';
+/// The post's web link (`<WEB_BASE>/p/?id=<id>`: a real folder on the static host); the app opens it via
+/// App Links at `/p/:id` (router.dart `appLinkTarget`).
+String postLink(Post p) => '${Env.webBase}/p/?id=${Uri.encodeQueryComponent(p.id)}';
+
+/// A profile's web link; the app opens it at `/u/:username`.
+String profileLink(String username) => '${Env.webBase}/u/?name=${Uri.encodeQueryComponent(username)}';
 
 Future<void> sharePost(Post p) => SharePlus.instance.share(ShareParams(
       text: [if (p.caption.isNotEmpty) p.caption.split('\n').first, postLink(p)].join('\n'),

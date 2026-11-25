@@ -68,9 +68,11 @@ class _ShareIntentListenerState extends ConsumerState<ShareIntentListener> {
   }
 }
 
-/// Images become draft photos (any format; the composer compresses them), text and links the caption.
+/// Images become draft photos (any format; the composer compresses them), videos draft videos (uploaded as
+/// they are), text and links the caption.
 Future<ComposeDraft> draftFromShared(List<SharedMediaFile> files) async {
   final images = <Uint8List>[];
+  final videos = <String>[];
   final text = <String>[];
   for (final f in files) {
     switch (f.type) {
@@ -84,14 +86,20 @@ Future<ComposeDraft> draftFromShared(List<SharedMediaFile> files) async {
         // The plugin also reports the app's own VIEW intents (launcher shortcuts: outstagram://app/...)
         // as a shared URL on a cold start; those are navigation, not content.
         if (f.path.trim().isNotEmpty && !isOwnDeepLink(f.path)) text.add(f.path.trim());
+      case SharedMediaType.video:
+        if (File(f.path).existsSync()) videos.add(f.path);
       default:
-        break; // videos/files: not supported by the composer yet
+        break; // other files: not supported by the composer
     }
     final msg = f.message?.trim();
     if (msg != null && msg.isNotEmpty && !isOwnDeepLink(msg) && !text.contains(msg)) text.add(msg);
   }
-  return ComposeDraft(images: images, caption: text.isEmpty ? null : text.join('\n'));
+  return ComposeDraft(images: images, videos: videos, caption: text.isEmpty ? null : text.join('\n'));
 }
 
-/// Links the app opens itself (launcher shortcuts), see `res/xml/shortcuts.xml`.
-bool isOwnDeepLink(String s) => s.trim().startsWith('outstagram://');
+/// Links the app opens itself: launcher shortcuts (`res/xml/shortcuts.xml`) and App Links to posts and
+/// profiles (`https://aryan.cfd/outstagram/p/?id=…`, `/u/?name=…`). They're navigation, not content.
+bool isOwnDeepLink(String s) {
+  final t = s.trim();
+  return t.startsWith('outstagram://') || RegExp(r'^https://aryan\.cfd/outstagram/[pu]/?\?\S*$').hasMatch(t);
+}

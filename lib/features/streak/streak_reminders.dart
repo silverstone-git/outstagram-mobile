@@ -59,6 +59,55 @@ class StreakReminders {
     }
   }
 
+  // --- one-off alerts (exam time left, tutor back) ------------------------------------------------
+
+  static const _alerts = AndroidNotificationChannel(
+    'alerts',
+    'Exam and tutor alerts',
+    description: 'Time running out in an exam you left; your AI tutor is available again',
+    importance: Importance.high,
+  );
+
+  /// One notification at [when] (ids outside the streak range, e.g. [ExamAlerts] / [TutorAlerts]).
+  /// Skipped when notifications are off. Exact if Android allows it, else inexact (may come late).
+  Future<void> alertAt(int id, DateTime when, {required String title, required String body, required String route}) async {
+    if (!_ready || !when.isAfter(DateTime.now().add(const Duration(seconds: 30)))) return;
+    try {
+      final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (!(await android?.areNotificationsEnabled() ?? false)) return;
+      await android?.createNotificationChannel(_alerts);
+      final exact = await android?.canScheduleExactNotifications() ?? false;
+      await _plugin.zonedSchedule(
+        id: id,
+        scheduledDate: tz.TZDateTime.from(when, tz.local),
+        title: title,
+        body: body,
+        payload: route,
+        androidScheduleMode: exact ? AndroidScheduleMode.exactAllowWhileIdle : AndroidScheduleMode.inexactAllowWhileIdle,
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails(
+            _alerts.id,
+            _alerts.name,
+            channelDescription: _alerts.description,
+            importance: Importance.high,
+            priority: Priority.high,
+            color: Brand.flameOrange,
+            styleInformation: BigTextStyleInformation(body),
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('alert $id not scheduled: $e');
+    }
+  }
+
+  Future<void> cancelAlert(int id) async {
+    if (!_ready) return;
+    try {
+      await _plugin.cancel(id: id);
+    } catch (_) {}
+  }
+
   // --- settings -------------------------------------------------------------------------------
 
   Future<bool> get enabled async => (await SharedPreferences.getInstance()).getBool(_prefOn) ?? false;

@@ -53,7 +53,7 @@ advantages (see `PLAN.md` §5).
 | P3 Exams | Dart port of the Pariksha engine, presets, practice, community exams, runner, results, history | ✅ done 2026-11-24 (verified on device; leftovers in `docs/TODO.md` §3) |
 | P4 AI tutor | SSE streaming, Markdown + LaTeX, skills, quota, library, saved equations, voice input | ✅ built 2026-11-24 (unit/widget tested; on-device QA pending, `docs/TODO.md` §4) |
 | P5 Paywall | 429/402/413 → upgrade sheet, Razorpay test | ✅ built 2026-11-24 (widget tested; prod on Razorpay test keys; payment verified on device 2026-11-24, `docs/TODO.md` §5) |
-| P6 Mobile extras | Push, share-target, result cards, App Links, offline packs | 🟡 result cards, share-target, launcher shortcuts done 2026-11-24 (verified on device); daily streak, pop quizzes and local streak reminders built 2026-11-25; push dropped (user: no Firebase); App Links need setup (`docs/TODO.md` §7) |
+| P6 Mobile extras | Push, share-target, result cards, App Links, offline packs | ✅ built 2026-11-25: result cards, share-target (photos, text, videos), shortcuts, streak + freezes + friends + home widget, local alerts (exam time left, tutor back), offline packs, App Links (needs `assetlinks.json` uploaded, `docs/TODO.md` §7); push dropped (no Firebase). On-device QA pending |
 | P7 Release | Upload key, Play Billing, account deletion, Play listing | ⏳ |
 
 **Testing setup decided by the user (2026-11-24):** the *prod* flavor talks to the **production** outsie +
@@ -93,7 +93,9 @@ lib/
                                  email_code_screen.dart (/sign-in/email), forgot_password_screen.dart (/forgot-password, /account/password)
     account/                     account_api.dart (GET /me → meProvider, confirm/change email), verify_email_screen.dart (/verify-email),
                                  account_screen.dart (/account, /account/email, VerifyEmailBanner), verify_gate.dart (403 → sheet)
-    streak/                      streak_api.dart (StreakStatus, streakProvider), streak_screen.dart (/streak, pop quiz, StreakHomeCard),
+    streak/                      streak_api.dart (StreakStatus incl. freezes, streakProvider, friendStreaksProvider),
+                                 streak_widget.dart (home-screen widget data), local_alerts.dart (exam time left, tutor back),
+                                 streak_screen.dart (/streak, pop quiz, freezes, friends, StreakHomeCard),
                                  streak_visuals.dart (animated flame, chip, confetti, week strip, calendar, reward, milestones),
                                  streak_celebration.dart (full-screen "Day N" after an exam), streak_reminders.dart (local notifications + copy)
     shell/                       AppShell (NavigationBar), ComingSoon placeholder
@@ -115,6 +117,8 @@ lib/
       exam_session.dart          running exam (Notifier) autosaved to shared_preferences (exam_session_v1); resume
       exams_home_screen.dart     streak card, resume card, quick practice, mocks, attempts, community
       exam_launcher.dart         launchExam(): discard-unfinished dialog → load → runner (Exams tab and pop quiz); compactButton
+      offline_packs.dart         OfflinePacks (saved subjects), offlineAwareSampler, PendingAttempts (upload later, taken_at)
+      offline_packs_screen.dart  /exams/offline: save/refresh/remove packs, pending uploads
       exam_runner_screen.dart    /exam/run full-screen: PageView, palette, timer + auto-submit, wakelock, PopScope
       exam_result_screen.dart    /exam/result (fresh, saves attempt) and /exam/attempt/:id; score, topics, SWOT, review,
                                  "Ask the AI tutor" per question (needs the saved attempt id); share button
@@ -271,6 +275,13 @@ Host specifics (Windows, user `karti`):
     foreground limit. Start them with `run_in_background` and wait for the notification instead of re-running or polling.
 33. **Widget tests:** `ListView` builds lazily, so off-screen children aren't found; put test fixtures in a
     `SingleChildScrollView` + `Column`. Importing another test file (e.g. `auth_test.dart` helpers) also imports its `main`.
+34. **CI memory:** `android/gradle.properties` asks for an 8 GB heap; on GitHub's 16 GB runner Gradle + Kotlin daemon +
+    R8 got killed (exit 143, "The operation was canceled"). CI writes a smaller `~/.gradle/gradle.properties` and builds
+    arm64 only for the staging check (arm + arm64 for the published APK).
+35. **Python edits from bash heredocs:** `'\\n'` inside a heredoc'd Python string becomes a real newline in the
+    written file (it broke Dart strings and a YAML block twice). Write edit scripts with the Write tool, or use `chr(10)`.
+36. **Buckets:** `pariksha` is public (`https://outsiebucket.aryan.cfd`: question images, the APK); `outstagram` is
+    private user media (presigned links only). Don't make user media public.
 
 ---
 

@@ -6,6 +6,9 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../core/auth/auth_controller.dart';
 import '../billing/paywall_sheet.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../feed/post_card.dart' show profileLink;
 import 'profile_view.dart';
 
 /// Your own profile (tab).
@@ -69,7 +72,13 @@ class UserProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(authControllerProvider).value?.user.username;
     return Scaffold(
-      appBar: AppBar(title: Text('@$username')),
+      appBar: AppBar(title: Text('@$username'), actions: [
+        IconButton(
+          tooltip: 'Share profile',
+          icon: const Icon(Icons.share_outlined),
+          onPressed: () => SharePlus.instance.share(ShareParams(text: '@$username on Outstagram\n${profileLink(username)}')),
+        ),
+      ]),
       body: ProfileView(username: username, isMe: me == username),
     );
   }

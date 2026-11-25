@@ -8,6 +8,7 @@ import '../../core/net/api_client.dart';
 import '../account/account_api.dart';
 import 'follow_list_screen.dart' show confirmUnfollow;
 import 'profile_photo.dart';
+import '../streak/streak_visuals.dart' show StreakBadge;
 import '../account/account_screen.dart';
 import '../../core/net/api_error.dart';
 import '../../core/ui/avatar.dart';
@@ -95,6 +96,10 @@ class _Header extends ConsumerWidget {
                 Flexible(
                   child: Text(p.fullname, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
                 ),
+                if (p.streak > 0) ...[
+                  const SizedBox(width: 8),
+                  Tooltip(message: '${p.streak}-day exam streak', child: StreakBadge(days: p.streak)),
+                ],
                 if (isMe && (ref.watch(meProvider).value?.needsVerification ?? false)) ...[
                   const SizedBox(width: 8),
                   const _UnverifiedBadge(),

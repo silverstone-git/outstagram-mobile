@@ -85,6 +85,17 @@ Quirks:
 - A follow **is** an accepted `FollowRequest` (directed). `Friendship` is a legacy per-pair summary the server keeps in sync.
 - `POST /posts/{id}/comment` returns `comment_id`; the app keeps it so a fresh comment can be deleted at once.
 - Still missing: notifications (no push, user decision), "liked by" UI.
+- `GET /users/{u}` also has `streak` (current daily streak, freezes counted).
+
+## Streak extras (server PR #10) and offline attempts (PR #11)
+
+- `GET /me/streak` adds `freezes`, `freezes_max` (2), `freeze_every` (7), `frozen_days` (calendar window, not in `days`),
+  `freezes_used` (spent on this read; show "a freeze saved your streak" once). After `POST /exam-attempts`:
+  `streak.freeze_earned`. Freezes cover missed days automatically when there are enough for all of them.
+- `GET /me/streak/friends` → `[{username, fullname, avatar_url, streak, today_done, is_you}]`, you + people you follow
+  with a streak > 0, longest first.
+- `POST /exam-attempts` accepts `taken_at` (ISO, UTC): used as `datetime_taken` if not in the future and ≤ 7 days old
+  (offline attempts uploaded later).
 
 ## Media
 

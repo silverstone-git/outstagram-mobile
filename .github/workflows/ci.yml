@@ -25,8 +25,16 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - name: Build staging APK (debug-signed)
-        run: flutter build apk --release --flavor staging --dart-define-from-file=config/staging.json
+      # The project's gradle.properties asks for an 8 GB heap (fine locally); on the 16 GB runner Gradle +
+      # the Kotlin daemon + R8 got OOM-killed (exit 143). ~/.gradle/gradle.properties overrides it here.
+      - name: Gradle memory for CI
+        run: |
+          mkdir -p ~/.gradle
+          echo 'org.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g' > ~/.gradle/gradle.properties
+          echo 'kotlin.daemon.jvmargs=-Xmx2g' >> ~/.gradle/gradle.properties
+          echo 'org.gradle.workers.max=2' >> ~/.gradle/gradle.properties
+      - name: Build staging APK (debug-signed, arm64 only; a build check and test artifact)
+        run: flutter build apk --release --flavor staging --dart-define-from-file=config/staging.json --target-platform android-arm64
       - uses: actions/upload-artifact@v4
         with:
           name: outstagram-staging-apk
@@ -70,13 +78,22 @@ jobs:
           mkdir -p ~/.android
           echo "${{ secrets.ANDROID_SIGNING_KEYSTORE_B64 }}" | base64 -d > ~/.android/debug.keystore
           keytool -list -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey | grep -E "SHA1:" | sed 's/^/signing /'
+      # The project's gradle.properties asks for an 8 GB heap (fine locally); on the 16 GB runner Gradle +
+      # the Kotlin daemon + R8 got OOM-killed (exit 143). ~/.gradle/gradle.properties overrides it here.
+      - name: Gradle memory for CI
+        if: env.HAS_SECRETS == 'true'
+        run: |
+          mkdir -p ~/.gradle
+          echo 'org.gradle.jvmargs=-Xmx5g -XX:MaxMetaspaceSize=1g' > ~/.gradle/gradle.properties
+          echo 'kotlin.daemon.jvmargs=-Xmx2g' >> ~/.gradle/gradle.properties
+          echo 'org.gradle.workers.max=2' >> ~/.gradle/gradle.properties
       - name: Build prod APK
         if: env.HAS_SECRETS == 'true'
         # build number grows with every run so each download is an update, never a "downgrade"
         run: |
           flutter pub get
           flutter build apk --release --flavor prod --dart-define-from-file=config/prod.json \
-            --build-number=$((1000 + ${{ github.run_number }}))
+            --build-number=$((1000 + ${{ github.run_number }})) --target-platform android-arm,android-arm64
       - name: Replace the APK in the bucket
         if: env.HAS_SECRETS == 'true'
         env:

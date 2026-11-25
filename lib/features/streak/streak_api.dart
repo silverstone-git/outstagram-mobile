@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/net/api_client.dart';
 import 'streak_reminders.dart';
+import 'streak_widget.dart';
+import '../exams/exam_api.dart';
+import '../exams/offline_packs.dart';
 
 /// `GET /me/streak` (and the `streak` field of `POST /exam-attempts`). Days are `YYYY-MM-DD` in the
 /// user's time zone, which the app sends as `X-Timezone`.
@@ -25,6 +28,14 @@ class StreakStatus {
     this.extended = false,
     this.milestone,
     this.rewardUnlocked = false,
+    this.frozenDays = const {},
+    this.freezes = 0,
+    this.freezesMax = 2,
+    this.freezeEvery = 7,
+    this.freezesUsed = 0,
+    this.freezeEarned = false,
+    this.lastDay,
+    this.tz,
   });
 
   factory StreakStatus.fromJson(Map<String, dynamic> j) {
@@ -56,6 +67,14 @@ class StreakStatus {
       extended: j['extended'] == true,
       milestone: (j['milestone'] as num?)?.toInt(),
       rewardUnlocked: j['reward_unlocked'] == true,
+      frozenDays: {for (final d in (j['frozen_days'] as List?) ?? const []) '$d'},
+      freezes: i(j['freezes']),
+      freezesMax: j['freezes_max'] == null ? 2 : i(j['freezes_max']),
+      freezeEvery: j['freeze_every'] == null ? 7 : i(j['freeze_every']),
+      freezesUsed: i(j['freezes_used']),
+      freezeEarned: j['freeze_earned'] == true,
+      lastDay: j['last_day'] as String?,
+      tz: j['tz'] as String?,
     );
   }
 
@@ -79,7 +98,21 @@ class StreakStatus {
   final int? milestone;
   final bool rewardUnlocked;
 
+  /// Streak freezes: missed days a freeze covered, how many are held / can be held, earned every N days.
+  final Set<String> frozenDays;
+  final int freezes;
+  final int freezesMax;
+  final int freezeEvery;
+  final int freezesUsed; // spent on this read to save the streak (say so once)
+  final bool freezeEarned; // right after an attempt
+  final String? lastDay; // last counted day, YYYY-MM-DD in [tz]
+  final String? tz;
+
   bool done(DateTime day) => days.contains(dayKey(day));
+  bool frozen(DateTime day) => frozenDays.contains(dayKey(day));
+
+  /// Days until the next freeze is earned, or null when the max is held.
+  int? get daysToFreeze => freezes >= freezesMax || freezeEvery < 1 ? null : freezeEvery - current % freezeEvery;
 
   static String dayKey(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -101,6 +134,34 @@ class StreakReward {
   final int tutorThreads;
 }
 
+/// One row of `GET /me/streak/friends`: you and the people you follow who have a streak.
+class FriendStreak {
+  const FriendStreak({required this.username, required this.fullname, required this.streak,
+      required this.todayDone, required this.isYou, this.avatar});
+
+  factory FriendStreak.fromJson(Map<String, dynamic> j) => FriendStreak(
+        username: '${j['username']}',
+        fullname: '${j['fullname'] ?? ''}',
+        streak: (j['streak'] as num?)?.toInt() ?? 0,
+        todayDone: j['today_done'] == true,
+        isYou: j['is_you'] == true,
+        avatar: j['avatar_url'] as String?,
+      );
+
+  final String username;
+  final String fullname;
+  final int streak;
+  final bool todayDone;
+  final bool isYou;
+  final String? avatar;
+}
+
+final friendStreaksProvider = FutureProvider.autoDispose<List<FriendStreak>>((ref) async {
+  ref.watch(streakProvider); // refresh after your own streak changes
+  final l = await ref.watch(apiProvider).get<List<dynamic>>('/me/streak/friends');
+  return [for (final f in l) FriendStreak.fromJson(Map<String, dynamic>.from(f as Map))];
+});
+
 /// The signed-in user's streak; null while signed out. Every new value re-plans the reminders.
 final streakProvider = AsyncNotifierProvider<StreakController, StreakStatus?>(StreakController.new);
 
@@ -112,18 +173,30 @@ class StreakController extends AsyncNotifier<StreakStatus?> {
     final uid = ref.watch(authControllerProvider.select((s) => s.value?.user.userId));
     if (uid == null) {
       await StreakReminders.instance.cancelAll();
+      StreakWidget.update(null);
       return null;
     }
+    await _flushPending();
     final s = StreakStatus.fromJson(await _api.get<Map<String, dynamic>>('/me/streak'));
     StreakReminders.instance.plan(s);
+    StreakWidget.update(s);
     return s;
   }
 
+  /// Exams finished offline go up first, so the streak below already counts them.
+  Future<void> _flushPending() async {
+    try {
+      await PendingAttempts.instance.flush(ref.read(examApiProvider));
+    } catch (_) {}
+  }
+
   Future<void> reload() async {
+    await _flushPending();
     try {
       final s = StreakStatus.fromJson(await _api.get<Map<String, dynamic>>('/me/streak'));
       state = AsyncData(s);
       StreakReminders.instance.plan(s);
+      StreakWidget.update(s);
     } catch (_) {
       // keep what we had (offline)
     }
@@ -133,6 +206,7 @@ class StreakController extends AsyncNotifier<StreakStatus?> {
   void apply(StreakStatus s) {
     state = AsyncData(s);
     StreakReminders.instance.plan(s);
+    StreakWidget.update(s);
   }
 
   Future<void> setSubject(String subject) async {

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../streak/local_alerts.dart';
 import 'engine/engine.dart';
 
 /// A running exam. Saved to disk after every change so an attempt survives the app being killed or
@@ -138,6 +139,13 @@ class ExamSessionController extends Notifier<ExamSession?> {
   void resume(ExamSession s) {
     _questionStartMs = DateTime.now().millisecondsSinceEpoch;
     state = s;
+    ExamAlerts.cancel();
+  }
+
+  /// Left the runner with the exam still going ("Save and exit"): warn before time runs out.
+  void leftRunner() {
+    final s = state;
+    if (s != null) ExamAlerts.scheduleFor(s);
   }
 
   /// Adds the time spent on the current question since it was shown.
@@ -179,10 +187,15 @@ class ExamSessionController extends Notifier<ExamSession?> {
   void paused() {
     final s = state;
     if (s == null) return;
-    _set(s.copyWith(timers: _committedTimers(s), leftApp: s.leftApp + 1));
+    final next = s.copyWith(timers: _committedTimers(s), leftApp: s.leftApp + 1);
+    _set(next);
+    ExamAlerts.scheduleFor(next);
   }
 
-  void resumed() => _questionStartMs = DateTime.now().millisecondsSinceEpoch;
+  void resumed() {
+    _questionStartMs = DateTime.now().millisecondsSinceEpoch;
+    ExamAlerts.cancel();
+  }
 
   FinishedExam? submit() {
     final s = state;
@@ -202,6 +215,7 @@ class ExamSessionController extends Notifier<ExamSession?> {
 
   void discard() {
     state = null;
+    ExamAlerts.cancel();
     _saving = _saving.then((_) async => (await SharedPreferences.getInstance()).remove(_key));
   }
 

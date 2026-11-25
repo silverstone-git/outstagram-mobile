@@ -8,6 +8,7 @@ import 'engine/engine.dart';
 import '../tutor/tutor_chat_screen.dart';
 import 'exam_api.dart';
 import 'exam_session.dart';
+import 'offline_packs.dart';
 import 'exams_home_screen.dart';
 import 'result_card.dart';
 import '../streak/streak_api.dart';
@@ -51,6 +52,7 @@ class FreshResultScreen extends ConsumerStatefulWidget {
 class _FreshResultScreenState extends ConsumerState<FreshResultScreen> {
   _Save _save = _Save.saving;
   String? _attemptId;
+  var _queued = false; // already waiting in PendingAttempts
 
   @override
   void initState() {
@@ -70,6 +72,7 @@ class _FreshResultScreenState extends ConsumerState<FreshResultScreen> {
         });
       }
       ref.invalidate(attemptsProvider);
+      PendingAttempts.instance.flush(ref.read(examApiProvider), streak: ref.read(streakProvider.notifier));
       final streak = saved.streak;
       if (streak != null) {
         ref.read(streakProvider.notifier).apply(streak);
@@ -80,6 +83,15 @@ class _FreshResultScreenState extends ConsumerState<FreshResultScreen> {
       }
     } catch (e) {
       debugPrint('save attempt failed: $e');
+      if (ApiException.from(e).isNetwork) {
+        // Offline: keep it on the phone; it uploads later and counts for the day it was taken.
+        if (!_queued) {
+          _queued = true;
+          await PendingAttempts.instance.add(f.examId, f.result, f.maxScore, DateTime.now());
+        }
+        if (mounted) setState(() => _save = _Save.queued);
+        return;
+      }
       if (mounted) setState(() => _save = _Save.failed);
     }
   }
@@ -96,6 +108,11 @@ class _FreshResultScreenState extends ConsumerState<FreshResultScreen> {
       banner: switch (_save) {
         _Save.saving => const _Banner(icon: Icons.cloud_upload_outlined, text: 'Saving to your attempts…'),
         _Save.saved => null,
+        _Save.queued => const _Banner(
+          icon: Icons.cloud_queue_rounded,
+          text: "You're offline. This attempt is saved on your phone and uploads (and counts for your streak) "
+              "when you're back online.",
+        ),
         _Save.failed => _Banner(
           icon: Icons.cloud_off_rounded,
           text: "Couldn't save this attempt. The review below still works.",
@@ -111,7 +128,7 @@ class _FreshResultScreenState extends ConsumerState<FreshResultScreen> {
   }
 }
 
-enum _Save { saving, saved, failed }
+enum _Save { saving, saved, failed, queued }
 
 enum _Filter { all, wrong, skipped, flagged }
 

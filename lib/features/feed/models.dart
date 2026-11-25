@@ -144,6 +144,7 @@ class Profile {
     required this.youFollow,
     required this.theyFollow,
     this.avatar,
+    this.streak = 0,
   });
 
   final String username;
@@ -156,6 +157,9 @@ class Profile {
   final double youFollow;
   final double theyFollow;
 
+  /// Daily exam streak (freezes counted); 0 on older servers.
+  final int streak;
+
   factory Profile.fromJson(Map<String, dynamic> j) => Profile(
         username: j['username'] as String,
         fullname: j['fullname'] as String,
@@ -166,6 +170,7 @@ class Profile {
         youFollow: (j['you_follow_them'] as num).toDouble(),
         theyFollow: (j['they_follow_you'] as num).toDouble(),
         avatar: j['avatar_url'] as String?,
+        streak: (j['streak'] as num?)?.toInt() ?? 0,
       );
 }
 

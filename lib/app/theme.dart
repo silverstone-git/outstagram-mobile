@@ -18,6 +18,9 @@ abstract final class Brand {
   static const mist = Color(0xFFE8EAF4);
   // logo kit (../assets/README.txt): for images that must look the same in both themes (result cards)
   static const logoNavy = Color(0xFF101020);
+  // streak freeze (frozen days in the streak calendar)
+  static const ice = Color(0xFF5EC8FF);
+  static const iceDeep = Color(0xFF2E7BEA);
   static const logoGreen = Color(0xFF39F56B);
   static const logoLime = Color(0xFFB7FF39);
   static const logoTeal = Color(0xFF00C98B);

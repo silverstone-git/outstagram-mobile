@@ -7,13 +7,16 @@ import '../feed/models.dart';
 /// Something to open the composer with: a result card ("Post to feed") or content shared from
 /// another app ("Share to Outstagram"). Images are raw bytes in any format; the composer compresses them.
 class ComposeDraft {
-  const ComposeDraft({this.images = const [], this.caption, this.category});
+  const ComposeDraft({this.images = const [], this.videos = const [], this.caption, this.category});
 
   final List<Uint8List> images;
+
+  /// Video files on the device (shared from another app); uploaded as they are.
+  final List<String> videos;
   final String? caption;
   final PostCategory? category;
 
-  bool get isEmpty => images.isEmpty && (caption == null || caption!.trim().isEmpty);
+  bool get isEmpty => images.isEmpty && videos.isEmpty && (caption == null || caption!.trim().isEmpty);
 }
 
 /// Set it, then navigate to `/create`; the composer takes it (and clears it) when it sees it.
