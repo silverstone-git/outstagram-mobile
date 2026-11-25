@@ -212,7 +212,13 @@ Next, needs the user:
       ≤7 days) so the streak counts the right day. Question images still need a connection.
 - [x] **Videos via share-target and the composer** (2026-11-25): `video/*` SEND/SEND_MULTIPLE, a Video tile in the
       composer; uploaded as they are (no transcoding), so they must fit the plan's per-file limit (free 200 kB,
-      Pro 15 MB); too big → the upgrade sheet for free users. Later: on-device compression (e.g. `video_compress`).
+      Pro 15 MB); too big → the upgrade sheet for free users.
+- [x] **On-device video compression** (2026-11-25, next-plan B): Media3 Transformer via `VideoCompressor.kt`
+      (`outstagram/video` channel). Clips that fit the plan stay as they are; bigger ones (and Contributor clips over
+      100 MB) are compressed to 95% of the limit (H.264/AAC, 480/720p for Pro, up to 1080p for Contributor, HDR → SDR);
+      clips too long even at 300 kbps get a "trim to ~N s" message. Pro's 4 MB holds about 70 s.
+- [ ] On-device QA of compression on a Pro account: 10 s / 60 s / 3 min clips, portrait + landscape, a 4K HDR clip;
+      check size ≤ limit, orientation, playback on web and app.
 - [ ] On-device QA of all of the above (widget on the S22 home screen, an alert firing, airplane-mode practice + upload).
 
 ## 8. P7: Release to Play
