@@ -90,7 +90,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       itemBuilder: (_, i) {
                         final u = _results[i];
                         return ListTile(
-                          leading: Avatar(name: u.username, radius: 22),
+                          leading: Avatar(name: u.username, url: u.avatar, radius: 22),
                           title: Text(u.fullname, style: const TextStyle(fontWeight: FontWeight.w700)),
                           subtitle: Text('@${u.username}${(u.bio ?? '').isEmpty ? '' : ' · ${u.bio}'}',
                               maxLines: 1, overflow: TextOverflow.ellipsis),

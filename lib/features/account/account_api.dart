@@ -11,6 +11,7 @@ class Me {
     required this.email,
     required this.emailVerified,
     this.verificationRequired = true,
+    this.avatar,
   });
 
   factory Me.fromJson(Map<String, dynamic> j) => Me(
@@ -19,12 +20,14 @@ class Me {
     email: '${j['email'] ?? ''}',
     emailVerified: j['email_verified'] == true,
     verificationRequired: j['verification_required'] != false,
+    avatar: j['avatar_url'] as String?,
   );
 
   final int userId;
   final String username;
   final String email;
   final bool emailVerified;
+  final String? avatar;
 
   /// The server refuses posting / uploads / the tutor until the email is confirmed.
   final bool verificationRequired;

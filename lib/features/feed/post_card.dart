@@ -101,7 +101,7 @@ class _PostCardState extends ConsumerState<PostCard> with SingleTickerProviderSt
       Padding(
         padding: const EdgeInsets.fromLTRB(14, 10, 4, 8),
         child: Row(children: [
-          GestureDetector(onTap: () => context.push('/u/${p.author}'), child: Avatar(name: p.author)),
+          GestureDetector(onTap: () => context.push('/u/${p.author}'), child: Avatar(name: p.author, url: p.authorAvatar)),
           const SizedBox(width: 10),
           Expanded(
             child: GestureDetector(

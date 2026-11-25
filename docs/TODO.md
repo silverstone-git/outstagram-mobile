@@ -142,8 +142,8 @@ per-photo limit follows the plan (`limits.media_bytes`). The button is hidden wh
 
 ## 6. Social gaps (server + app)
 
-- Server: unfollow (`DELETE /users/{u}/follow`), reject request, followers/following lists, `PUT /me` (fullname, bio),
-  profile photo (upload + `avatar_url` column), `/posts/{id}` with counts, delete a comment,
+- [x] Profile photo (2026-11-25): `PUT/DELETE /me/avatar`, shown on profiles, posts, comments, search, requests (app + web).
+- Server: unfollow (`DELETE /users/{u}/follow`), reject request, followers/following lists, `PUT /me` (fullname, bio), `/posts/{id}` with counts, delete a comment,
   "liked by" list UI (`/posts/{id}/likes/{page}` exists).
 - App: profile edit screen, followers/following sheets, post detail route `/p/:id` (for share links), video playback
   (`video_player`; the card shows a placeholder today), image pinch-zoom, share post (`share_plus`).

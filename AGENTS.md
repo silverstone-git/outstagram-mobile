@@ -84,7 +84,7 @@ lib/
       api_error.dart             ApiException (FastAPI detail parsing, isPaywall, isNetwork)
     ui/
       math_text.dart             MathText: inline/display LaTeX (flutter_math_fork), web-compatible clean-up
-      avatar.dart                letter avatar coloured by username (the API has no profile photos)
+      avatar.dart                Avatar: profile photo (cached by object path, re-signed URLs share a cache entry) over a letter avatar
       feedback.dart              showError(context, e): snackbar, the upgrade sheet for paywall errors, the confirm-email sheet for 403 email_unverified
       code_field.dart            CodeField (6 boxes over one hidden field, autofill + paste, auto-submit), ResendButton (60 s)
   features/
@@ -99,7 +99,8 @@ lib/
     feed/                        models.dart (Post, Comment, Profile, …), social_api.dart, post_card.dart,
                                  post_list.dart (infinite + pull-to-refresh), comments_sheet.dart, home_screen.dart
     social/search_screen.dart    debounced /users/search
-    profile/                     profile_view.dart (header + posts, follow button, stats), profile_screen.dart
+    profile/                     profile_view.dart (header + posts, follow button, stats), profile_screen.dart,
+                                 profile_photo.dart (tap your avatar: gallery / camera / remove → PUT|DELETE /me/avatar)
     activity/activity_screen.dart follow requests + approve
     compose/compose_screen.dart  pick/camera → WebP (plan's media limit) → /media-upload/bulk → /posts; postsVersionProvider
     compose/compose_draft.dart   composeDraftProvider: images/caption/category the composer takes when it opens
@@ -131,6 +132,7 @@ test/math_text_test.dart         LaTeX clean-up/parsing
 test/billing_test.dart           status parsing, price format, paywall error → sheet, no keys / Pro states
 test/p6_share_test.dart          result card layout/summary, shared files → draft, own deep links ignored
 test/tutor_test.dart             SSE decoding, stream errors (429/402/404 bodies), normalizeMath, TutorMarkdown widget
+test/avatar_test.dart            avatar_url parsing in every model, cache key, Avatar widget
 test/email_streak_test.dart      email-code/reset sign-in, register → confirm step, /me + 403 email_unverified, CodeField,
                                  streak parsing, reminder copy, streak widgets
 tool/exam_golden.ts              regenerates the golden fixtures with bun from ../outstagram-web (run after engine.ts changes)

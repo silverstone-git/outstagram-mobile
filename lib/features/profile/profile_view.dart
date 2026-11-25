@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/net/api_client.dart';
 import '../account/account_api.dart';
+import 'profile_photo.dart';
 import '../account/account_screen.dart';
 import '../../core/net/api_error.dart';
 import '../../core/ui/avatar.dart';
@@ -68,7 +69,9 @@ class _Header extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Avatar(name: p.username, radius: 38),
+                isMe
+                    ? ProfilePhotoButton(name: p.username, url: p.avatar)
+                    : Avatar(name: p.username, url: p.avatar, radius: 38),
                 const SizedBox(width: 18),
                 Expanded(
                   child: Row(
