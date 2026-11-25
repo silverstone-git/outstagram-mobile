@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -108,6 +109,18 @@ class SocialApi {
   /// Uploads media and returns the URLs to store in the post. Prefers the permanent `public_url`;
   /// `presigned_url` expires after 7 days.
   Future<List<Map<String, String>>> upload(List<UploadFile> files, {void Function(double)? onProgress}) async {
+    // One file per request: a post's photos together can pass Cloud Run's 32 MB request cap
+    // (Contributor photos may be up to 20 MB each).
+    if (files.length > 1) {
+      final total = files.fold<int>(0, (n, f) => n + f.bytes.length).clamp(1, 1 << 62);
+      var done = 0;
+      final out = <Map<String, String>>[];
+      for (final f in files) {
+        out.addAll(await upload([f], onProgress: (p) => onProgress?.call((done + p * f.bytes.length) / total)));
+        done += f.bytes.length;
+      }
+      return out;
+    }
     final form = FormData();
     for (final f in files) {
       form.files.add(MapEntry(
@@ -131,6 +144,31 @@ class SocialApi {
     } catch (e) {
       throw ApiException.from(e);
     }
+  }
+
+  /// A video straight to the bucket: `POST /media-upload/video` (the server checks the plan's video limit
+  /// and signs the length), then a streamed PUT from the file. Returns the media entry for the post.
+  Future<Map<String, String>> uploadVideo(String path, int size,
+      {required String mime, void Function(int sent)? onSent}) async {
+    final name = path.split(RegExp(r'[\\/]')).last;
+    final slot = await _api.post<Map<String, dynamic>>('/media-upload/video',
+        data: {'filename': name, 'content_type': mime, 'bytes': size});
+    final headers = {
+      for (final e in Map<String, dynamic>.from(slot['headers'] as Map? ?? const {}).entries) e.key: '${e.value}',
+      Headers.contentLengthHeader: '$size',
+    };
+    try {
+      // A bare Dio: no base URL, no auth header (the URL is presigned).
+      await Dio().put<void>(
+        slot['upload_url'] as String,
+        data: File(path).openRead(),
+        options: Options(headers: headers, sendTimeout: const Duration(minutes: 30)),
+        onSendProgress: (sent, _) => onSent?.call(sent),
+      );
+    } catch (e) {
+      throw ApiException.from(e);
+    }
+    return {'url': slot['url'] as String, 'media_type': 'video'};
   }
 
   Future<void> createPost({

@@ -12,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/net/api_error.dart';
 import '../../core/ui/feedback.dart';
 import '../billing/billing_api.dart';
+import '../billing/paywall_sheet.dart';
 import 'compose_draft.dart';
 import '../feed/models.dart';
 import '../feed/social_api.dart';
@@ -52,7 +53,8 @@ class ComposeScreen extends ConsumerStatefulWidget {
 }
 
 class _ComposeScreenState extends ConsumerState<ComposeScreen> {
-  static const _maxImages = 10;
+  /// Photos + videos per post (plan's `media_per_post`, 4 for everyone).
+  int get _maxImages => ref.read(billingStatusProvider).value?.limits.mediaPerPost ?? 4;
 
   final _caption = TextEditingController();
   final _picker = ImagePicker();
@@ -126,7 +128,13 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   Future<Uint8List?> _compress(XFile f, int max) async => _compressBytes(await f.readAsBytes(), max);
 
   Future<Uint8List?> _compressBytes(Uint8List raw, int max) async {
-    for (final (side, q) in [(1600, 82), (1440, 72), (1280, 62), (1080, 52), (900, 45)]) {
+    // Paid plans (4 MB Pro, 20 MB Contributor) keep big, high-quality photos; Free steps down to fit 200 kB.
+    final steps = [
+      if (max >= 15000000) (4096, 92),
+      if (max >= 4000000) ...[(3072, 90), (2048, 88)],
+      (1600, 82), (1440, 72), (1280, 62), (1080, 52), (900, 45),
+    ];
+    for (final (side, q) in steps) {
       final out = await FlutterImageCompress.compressWithList(
         raw,
         minWidth: side,
@@ -170,17 +178,34 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   }
 
   /// Videos are uploaded as they are, so they must fit the plan's per-file limit (free 200 kB, Pro 15 MB).
+  Future<Limits> _limits() async {
+    try {
+      return (await ref.read(billingStatusProvider.future)).limits;
+    } catch (_) {
+      return Limits.free;
+    }
+  }
+
+  /// Videos are posted as they are: Free can't post them, Pro up to 4 MB, Contributor up to 500 MB.
   Future<void> _addVideo(String path) async {
     if (_images.length >= _maxImages || !mounted) return;
     final size = await File(path).length();
-    final max = await _maxBytes();
+    final lim = await _limits();
     if (!mounted) return;
-    if (size > max) {
-      final pro = ref.read(billingStatusProvider).value?.isPro ?? false;
+    final plan = ref.read(billingStatusProvider).value?.plan ?? 'free';
+    if (!lim.videosAllowed) {
+      showPaywall(context, code: 'video_not_allowed', needs: 'pro',
+          message: 'Posting videos needs Pro (up to 4 MB) or Contributor (up to 500 MB).');
+      return;
+    }
+    final max = lim.videoBytes;
+    if (max != null && size > max) {
+      final needs = plan == 'pro' ? 'contributor' : null;
       final msg = 'This video is ${fmtBytes(size)}; videos are posted as they are and your plan allows '
-          '${fmtBytes(max)} per file.${pro ? ' Trim it in your gallery first.' : ''}';
+          '${fmtBytes(max)}.${needs == null ? ' Trim it in your gallery first.' : ''}';
       showError(context, ApiException(msg, status: 413, code: 'media_too_large',
-          detail: {'code': 'media_too_large', 'message': msg, 'upgrade': !pro, 'size': size, 'limit': max}));
+          detail: {'code': 'media_too_large', 'message': msg, 'upgrade': needs != null, 'needs': ?needs,
+              'size': size, 'limit': max}));
       return;
     }
     setState(() => _images.add(_Picked.video(path, size)));
@@ -202,23 +227,34 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     setState(() => _progress = 0);
     try {
       final api = ref.read(socialApiProvider);
-      var media = <Map<String, String>>[];
-      if (_images.isNotEmpty) {
-        final files = <UploadFile>[];
-        for (var i = 0; i < _images.length; i++) {
-          final m = _images[i];
-          if (m.isVideo) {
-            final ext = m.videoPath!.split('.').last.toLowerCase();
-            files.add(UploadFile(
-              bytes: await File(m.videoPath!).readAsBytes(),
-              filename: 'video_$i.${_videoMime.containsKey(ext) ? ext : 'mp4'}',
-              mime: _videoMime[ext] ?? 'video/mp4',
-            ));
-          } else {
-            files.add(UploadFile(bytes: m.bytes!, filename: 'photo_$i.webp', mime: 'image/webp'));
-          }
+      // Photos go through the server (it re-checks and compresses); videos straight to the bucket with
+      // a presigned PUT (they can be far bigger than a Cloud Run request). Progress is by bytes.
+      final photos = [for (final m in _images) if (!m.isVideo) m];
+      final total = _images.fold<int>(0, (n, m) => n + (m.isVideo ? m.videoSize : m.bytes!.length)).clamp(1, 1 << 62);
+      var done = 0;
+      void progress(int sent) => mounted ? setState(() => _progress = (done + sent) / total * 0.95) : null;
+      final photoUrls = photos.isEmpty
+          ? const <Map<String, String>>[]
+          : await api.upload([
+              for (var i = 0; i < photos.length; i++)
+                UploadFile(bytes: photos[i].bytes!, filename: 'photo_$i.webp', mime: 'image/webp'),
+            ], onProgress: (p) => progress((p * photos.fold<int>(0, (n, m) => n + m.bytes!.length)).round()));
+      done += photos.fold<int>(0, (n, m) => n + m.bytes!.length);
+      final media = <Map<String, String>>[];
+      var pi = 0;
+      for (final m in _images) {
+        if (!m.isVideo) {
+          media.add(photoUrls[pi++]);
+          continue;
         }
-        media = await api.upload(files, onProgress: (p) => mounted ? setState(() => _progress = p * 0.9) : null);
+        final ext = m.videoPath!.split('.').last.toLowerCase();
+        media.add(await api.uploadVideo(
+          m.videoPath!,
+          m.videoSize,
+          mime: _videoMime[ext] ?? 'video/mp4',
+          onSent: progress,
+        ));
+        done += m.videoSize;
       }
       await api.createPost(media: media, caption: _caption.text.trim(), category: _category);
       HapticFeedback.heavyImpact();
@@ -368,13 +404,22 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Photos are compressed on your phone (WebP, ≤${fmtBytes(ref.watch(billingStatusProvider).value?.limits.mediaBytes ?? Limits.free.mediaBytes)} each) before upload. Videos are posted as they are and must fit the same limit.',
+            _limitsText(ref.watch(billingStatusProvider).value?.limits ?? Limits.free),
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
         ],
       ),
     );
   }
+}
+
+/// "Up to 4 photos or videos. Photos are compressed … Videos need Pro." for the plan's limits.
+String _limitsText(Limits l) {
+  final videos = !l.videosAllowed
+      ? 'Videos need Pro or Contributor.'
+      : 'Videos are posted as they are, up to ${fmtLimit(l.videoBytes, fmtBytes)}.';
+  return 'Up to ${l.mediaPerPost ?? 4} photos or videos per post. Photos are compressed on your phone '
+      '(WebP, ≤${fmtBytes(l.mediaBytes)} each). $videos';
 }
 
 class _VideoTile extends StatelessWidget {

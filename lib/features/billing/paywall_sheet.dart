@@ -12,20 +12,23 @@ import 'billing_api.dart';
 import 'razorpay_checkout.dart';
 
 /// Why the sheet opened: a server paywall code (`ai_quota`, `tutor_threads`, `tutor_storage`,
-/// `media_too_large`) or `manual` (opened from the profile menu).
+/// `media_too_large`, `video_not_allowed`, `posts_limit`) or `manual` (opened from the profile menu).
 const _headline = {
   'ai_quota': "You've used this hour's AI prompts",
   'tutor_threads': 'Your tutor history is full',
   'tutor_storage': 'Your tutor history is full',
-  'media_too_large': 'That file is too big for the free plan',
-  'manual': 'Outstagram Pro',
+  'media_too_large': 'That file is too big for your plan',
+  'video_not_allowed': 'Videos come with Pro',
+  'posts_limit': "You've reached your post limit",
+  'manual': 'Outstagram plans',
 };
 
 var _open = false;
 
 /// Opens the upgrade sheet for a paywall [ApiException] (or [code] directly). Only one at a time.
-/// Resolves to true if the user bought Pro.
-Future<bool> showPaywall(BuildContext context, {String code = 'manual', String? message}) async {
+/// [needs] (from the server's `detail.needs`) highlights the plan that lifts the limit.
+/// Resolves to true if the user bought a pass.
+Future<bool> showPaywall(BuildContext context, {String code = 'manual', String? message, String? needs}) async {
   if (_open || !context.mounted) return false;
   _open = true;
   try {
@@ -36,7 +39,7 @@ Future<bool> showPaywall(BuildContext context, {String code = 'manual', String? 
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (_) => PaywallSheet(code: code, message: message),
+      builder: (_) => PaywallSheet(code: code, message: message, needs: needs),
     );
     return bought ?? false;
   } finally {
@@ -47,22 +50,29 @@ Future<bool> showPaywall(BuildContext context, {String code = 'manual', String? 
 /// [showPaywall] for an error from the API; false (and nothing shown) if it isn't a paywall error.
 bool showPaywallFor(BuildContext context, Object error) {
   if (error is! ApiException || !error.isPaywall) return false;
-  showPaywall(context, code: error.code ?? 'manual', message: error.message);
+  final d = error.detail;
+  showPaywall(
+    context,
+    code: error.code ?? 'manual',
+    message: error.message,
+    needs: d is Map ? d['needs'] as String? : null,
+  );
   return true;
 }
 
 class PaywallSheet extends ConsumerStatefulWidget {
-  const PaywallSheet({super.key, required this.code, this.message});
+  const PaywallSheet({super.key, required this.code, this.message, this.needs});
 
   final String code;
   final String? message;
+  final String? needs;
 
   @override
   ConsumerState<PaywallSheet> createState() => _PaywallSheetState();
 }
 
 class _PaywallSheetState extends ConsumerState<PaywallSheet> {
-  var _paying = false;
+  String? _paying; // plan id being bought
   String? _error;
 
   @override
@@ -74,34 +84,34 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
 
   bool get _history => widget.code == 'tutor_threads' || widget.code == 'tutor_storage';
 
-  Future<void> _pay(BillingStatus s) async {
+  Future<void> _pay(PlanInfo plan) async {
     final color = Theme.of(context).colorScheme.primary;
     final hex = '#${(color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
     setState(() {
-      _paying = true;
+      _paying = plan.id;
       _error = null;
     });
     try {
       final api = ref.read(billingApiProvider);
-      final order = await api.order(widget.code);
+      final order = await api.order(widget.code, plan: plan.id);
       final result = await openRazorpay(order, themeColor: hex, reason: widget.code);
       if (result == null) return; // backed out of Checkout
-      final plan = await api.verify(result);
+      final got = await api.verify(result);
       ref.invalidate(billingStatusProvider);
       ref.read(tutorQuotaProvider.notifier).refresh();
       if (!mounted) return;
-      if (plan == 'pro') {
+      if (got == plan.id) {
         HapticFeedback.heavyImpact();
         final messenger = ScaffoldMessenger.of(context);
         Navigator.pop(context, true);
-        messenger.showSnackBar(const SnackBar(content: Text('Welcome to Pro! Your limits are raised.')));
+        messenger.showSnackBar(SnackBar(content: Text('Welcome to ${plan.short}! Your limits are raised.')));
       } else {
-        setState(() => _error = "The payment went through but Pro isn't active yet. Pull to refresh in a minute.");
+        setState(() => _error = "The payment went through but ${plan.short} isn't active yet. Try again in a minute.");
       }
     } catch (e) {
       if (mounted) setState(() => _error = ApiException.from(e).message);
     } finally {
-      if (mounted) setState(() => _paying = false);
+      if (mounted) setState(() => _paying = null);
     }
   }
 
@@ -110,9 +120,9 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
     final cs = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final status = ref.watch(billingStatusProvider);
-    final isPro = status.value?.isPro ?? false;
+    final s = status.value;
     return PopScope(
-      canPop: !_paying,
+      canPop: _paying == null,
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         child: Column(
@@ -130,7 +140,10 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
             Text(_headline[widget.code] ?? _headline['manual']!, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
             Text(
-              widget.message ?? (isPro ? 'Your Pro pass is active.' : 'Upgrade to Pro for higher limits.'),
+              widget.message ??
+                  (s == null || !s.isPro
+                      ? 'More posts, bigger photos, videos and more AI help.'
+                      : 'Your ${s.current?.short ?? 'paid'} pass is active.'),
               style: text.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
@@ -151,7 +164,7 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
             if (_history) ...[
               const SizedBox(height: 12),
               OutlinedButton(
-                onPressed: _paying
+                onPressed: _paying != null
                     ? null
                     : () {
                         final router = GoRouter.of(context);
@@ -163,8 +176,8 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
             ],
             const SizedBox(height: 4),
             TextButton(
-              onPressed: _paying ? null : () => Navigator.pop(context, false),
-              child: Text(isPro ? 'Close' : 'Maybe later'),
+              onPressed: _paying != null ? null : () => Navigator.pop(context, false),
+              child: Text(s?.upgrades.isEmpty ?? false ? 'Close' : 'Maybe later'),
             ),
           ],
         ),
@@ -174,73 +187,103 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
 
   Widget _body(BillingStatus s) {
     final cs = Theme.of(context).colorScheme;
-    if (s.isPro) {
-      final until = s.validUntil == null ? '' : ' until ${DateFormat.yMMMd().format(s.validUntil!)}';
-      return _Note(
-        widget.code == 'manual'
-            ? "You're on Pro$until. Thanks for supporting Outstagram!"
-            : "You're on Pro$until and reached even the Pro limit. It resets soon.",
-        highlight: true,
-      );
-    }
-    final f = s.freeLimits, p = s.proLimits;
-    final rows = [
-      ('AI tutor prompts / hour', '${f.aiPromptsPerHour}', '${p.aiPromptsPerHour}'),
-      ('Saved tutor chats', '${f.tutorThreads}', '${p.tutorThreads}'),
-      ('Tutor history storage', fmtBytes(f.tutorBytes), fmtBytes(p.tutorBytes)),
-      ('Photo / video size', fmtBytes(f.mediaBytes), fmtBytes(p.mediaBytes)),
-    ];
     final small = TextStyle(fontSize: 12, color: cs.onSurfaceVariant);
+    final plans = s.plans;
+    String videos(Limits l) => !l.videosAllowed ? '—' : fmtLimit(l.videoBytes, fmtBytes);
+    final rows = <(String, String Function(Limits))>[
+      ('Posts', (l) => fmtLimit(l.posts)),
+      ('Photos/videos per post', (l) => fmtLimit(l.mediaPerPost)),
+      ('Photo size', (l) => fmtBytes(l.mediaBytes)),
+      ('Video size', videos),
+      ('AI tutor messages / hour', (l) => fmtLimit(l.aiPromptsPerHour)),
+      ('Saved tutor chats', (l) => fmtLimit(l.tutorThreads)),
+    ];
+    final highlight = widget.needs ?? (s.upgrades.isEmpty ? s.plan : s.upgrades.first.id);
+    final until = s.validUntil == null ? '' : ' until ${DateFormat.yMMMd().format(s.validUntil!)}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: cs.outlineVariant),
-            borderRadius: BorderRadius.circular(16),
+        if (s.isPro) ...[
+          _Note(
+            s.upgrades.isEmpty
+                ? "You're on ${s.current?.short ?? 'Contributor'}$until, the top plan. Thanks for supporting Outstagram!"
+                : "You're on ${s.current?.short ?? 'Pro'}$until.",
+            highlight: true,
           ),
+          const SizedBox(height: 12),
+        ],
+        Container(
+          decoration: BoxDecoration(border: Border.all(color: cs.outlineVariant), borderRadius: BorderRadius.circular(16)),
           clipBehavior: Clip.antiAlias,
           child: Table(
-            columnWidths: const {0: FlexColumnWidth(), 1: IntrinsicColumnWidth(), 2: IntrinsicColumnWidth()},
+            columnWidths: {
+              0: const FlexColumnWidth(),
+              for (var i = 1; i <= plans.length; i++) i: const IntrinsicColumnWidth(),
+            },
             defaultVerticalAlignment: TableCellVerticalAlignment.middle,
             children: [
               TableRow(
                 decoration: BoxDecoration(color: cs.surfaceContainerHighest),
                 children: [
                   const SizedBox(),
-                  _cell(Text('Free', style: small)),
-                  _cell(Text('Pro', style: small.copyWith(color: cs.primary, fontWeight: FontWeight.w600))),
+                  for (final p in plans)
+                    _cell(Column(children: [
+                      Text(
+                        p.short,
+                        style: small.copyWith(
+                          color: p.id == highlight ? cs.primary : null,
+                          fontWeight: p.id == highlight || p.id == s.plan ? FontWeight.w800 : FontWeight.w600,
+                        ),
+                      ),
+                      Text(p.id == 'free' ? '' : p.price.label, style: small.copyWith(fontSize: 11)),
+                    ])),
                 ],
               ),
-              for (final (label, free, pro) in rows)
+              for (final (label, value) in rows)
                 TableRow(
                   decoration: BoxDecoration(border: Border(top: BorderSide(color: cs.outlineVariant))),
                   children: [
-                    _cell(Text(label, style: const TextStyle(fontSize: 13)), left: true),
-                    _cell(Text(free, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant))),
-                    _cell(Text(pro, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700))),
+                    _cell(Text(label, style: const TextStyle(fontSize: 12.5)), left: true),
+                    for (final p in plans)
+                      _cell(Text(
+                        value(p.limits),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: p.id == highlight ? FontWeight.w800 : FontWeight.w500,
+                          color: p.id == highlight ? null : cs.onSurfaceVariant,
+                        ),
+                      )),
                   ],
                 ),
             ],
           ),
         ),
         const SizedBox(height: 12),
-        _Check('Tutor answers grounded in every subject\'s books'),
-        _Check('One payment, no auto-renewal: ${s.price.days} days of Pro'),
-        const SizedBox(height: 16),
-        if (!Env.razorpayAllowed)
-          const _Note('Pro can\'t be bought in this version of the app yet.')
+        const _Check("Tutor answers grounded in every subject's books"),
+        _Check('One payment, no auto-renewal: ${s.price.days} days per pass. Upgrading to Contributor starts it now.'),
+        const SizedBox(height: 12),
+        if (s.upgrades.isEmpty)
+          const SizedBox.shrink()
+        else if (!Env.razorpayAllowed)
+          const _Note("Passes can't be bought in this version of the app yet.")
         else if (!s.paymentsEnabled)
           const _Note("Payments aren't set up on this server yet.")
         else ...[
-          FilledButton.icon(
-            onPressed: _paying ? null : () => _pay(s),
-            icon: _paying
-                ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
-                : const Icon(Icons.auto_awesome_rounded),
-            label: Text('Pay ${s.price.label} with Razorpay'),
-          ),
-          const SizedBox(height: 10),
+          for (final p in s.upgrades) ...[
+            p.id == highlight
+                ? FilledButton.icon(
+                    onPressed: _paying != null ? null : () => _pay(p),
+                    icon: _paying == p.id ? const _Spinner() : const Icon(Icons.auto_awesome_rounded),
+                    label: Text('Get ${p.short} · ${p.price.label}'),
+                  )
+                : OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                    onPressed: _paying != null ? null : () => _pay(p),
+                    icon: _paying == p.id ? const _Spinner() : const Icon(Icons.workspace_premium_outlined),
+                    label: Text('Get ${p.short} · ${p.price.label}'),
+                  ),
+            const SizedBox(height: 8),
+          ],
           Text.rich(
             TextSpan(
               style: small,
@@ -283,9 +326,17 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
   );
 
   Widget _cell(Widget child, {bool left = false}) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
     child: Align(alignment: left ? Alignment.centerLeft : Alignment.centerRight, child: child),
   );
+}
+
+class _Spinner extends StatelessWidget {
+  const _Spinner();
+
+  @override
+  Widget build(BuildContext context) =>
+      const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.5));
 }
 
 class _Check extends StatelessWidget {

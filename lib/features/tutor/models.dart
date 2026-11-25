@@ -52,24 +52,46 @@ class ChatMessage {
 }
 
 class Quota {
-  const Quota({required this.limit, required this.used, required this.remaining, this.resetsAt, this.plan});
+  const Quota({
+    required this.limit,
+    required this.used,
+    required this.remaining,
+    this.resetsAt,
+    this.plan,
+    this.unlimited = false,
+  });
 
-  factory Quota.fromJson(Map<String, dynamic> j) => Quota(
-    limit: (j['limit'] as num?)?.toInt() ?? 0,
-    used: (j['used'] as num?)?.toInt() ?? 0,
-    remaining: (j['remaining'] as num?)?.toInt() ?? 0,
-    resetsAt: parseServerTime(j['resets_at']),
-    plan: j['plan'] as String?,
-  );
+  factory Quota.fromJson(Map<String, dynamic> j) {
+    final unlimited = j['unlimited'] == true || (j.containsKey('limit') && j['limit'] == null);
+    return Quota(
+      limit: (j['limit'] as num?)?.toInt() ?? 0,
+      used: (j['used'] as num?)?.toInt() ?? 0,
+      remaining: (j['remaining'] as num?)?.toInt() ?? 0,
+      resetsAt: parseServerTime(j['resets_at']),
+      plan: j['plan'] as String?,
+      unlimited: unlimited,
+    );
+  }
 
-  final int limit;
+  final int limit; // 0 when [unlimited]
   final int used;
   final int remaining;
   final DateTime? resetsAt;
   final String? plan;
+  final bool unlimited; // Contributor
 
-  bool get isOut => remaining <= 0;
-  bool get isPro => plan == 'pro';
+  bool get isOut => !unlimited && remaining <= 0;
+  bool get isPro => plan == 'pro' || plan == 'contributor';
+
+  /// The plan that would lift this limit (paywall highlight), or null on the top plan.
+  String? get upgradeTo => switch (plan) { 'contributor' => null, 'pro' => 'contributor', _ => 'pro' };
+
+  /// "7/10 AI prompts left this hour · Pro" or "Unlimited AI prompts · Contributor".
+  String get pill {
+    if (unlimited) return 'Unlimited AI prompts · Contributor';
+    final tag = plan == 'pro' ? ' · Pro' : '';
+    return '$remaining/$limit AI prompts left this hour$tag${isOut ? '.$resetHint' : ''}';
+  }
 
   /// " Next prompt in ~12 min." or "" (mirrors the web).
   String get resetHint {

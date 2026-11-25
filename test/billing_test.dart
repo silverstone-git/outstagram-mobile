@@ -7,11 +7,26 @@ import 'package:outstagram/core/net/api_error.dart';
 import 'package:outstagram/core/ui/feedback.dart';
 import 'package:outstagram/features/billing/billing_api.dart';
 import 'package:outstagram/features/billing/paywall_sheet.dart';
+import 'package:outstagram/features/tutor/models.dart';
 
 /// Shape of outsie's `GET /billing/status` (src/repository/billing.py `status`).
+const _free = {'ai_prompts_per_hour': 10, 'tutor_threads': 10, 'tutor_bytes': 100000, 'media_bytes': 200000,
+    'video_bytes': 0, 'media_per_post': 4, 'posts': 50};
+const _pro = {'ai_prompts_per_hour': 60, 'tutor_threads': 1000, 'tutor_bytes': 25000000, 'media_bytes': 4000000,
+    'video_bytes': 4000000, 'media_per_post': 4, 'posts': 400};
+const _contributor = {'ai_prompts_per_hour': null, 'tutor_threads': 1000, 'tutor_bytes': 25000000,
+    'media_bytes': 20000000, 'video_bytes': 500000000, 'media_per_post': 4, 'posts': null};
+
 Map<String, dynamic> statusJson({String plan = 'free', bool payments = true, bool test = true}) => {
   'plan': plan,
-  'valid_until': plan == 'pro' ? '2026-12-24T10:00:00Z' : null,
+  'valid_until': plan != 'free' ? '2026-12-24T10:00:00Z' : null,
+  'plans': [
+    {'id': 'free', 'name': 'Free', 'price': 0, 'currency': 'INR', 'days': null, 'limits': _free},
+    {'id': 'pro', 'name': 'Outstagram Pro', 'price': 9900, 'currency': 'INR', 'days': 30, 'limits': _pro},
+    {'id': 'contributor', 'name': 'Outstagram Contributor', 'price': 49900, 'currency': 'INR', 'days': 30,
+      'limits': _contributor},
+  ],
+  'posts': 12,
   'limits': {'ai_prompts_per_hour': 10, 'tutor_threads': 10, 'tutor_bytes': 100000, 'media_bytes': 200000},
   'usage': {
     'ai': {'limit': 10, 'used': 10, 'remaining': 0, 'resets_at': null},
@@ -21,8 +36,8 @@ Map<String, dynamic> statusJson({String plan = 'free', bool payments = true, boo
   'payments_enabled': payments,
   'test_mode': test,
   'price': {'amount': 9900, 'currency': 'INR', 'days': 30},
-  'pro_limits': {'ai_prompts_per_hour': 60, 'tutor_threads': 1000, 'tutor_bytes': 25000000, 'media_bytes': 15000000},
-  'free_limits': {'ai_prompts_per_hour': 10, 'tutor_threads': 10, 'tutor_bytes': 100000, 'media_bytes': 200000},
+  'pro_limits': _pro,
+  'free_limits': _free,
 };
 
 class FakeBilling extends BillingApi {
@@ -67,6 +82,28 @@ void main() {
     expect(s.freeLimits.mediaBytes, 200000);
     expect(s.paymentsEnabled && s.testMode, isTrue);
     expect(s.price.days, 30);
+    expect([for (final p in s.plans) p.short], ['Free', 'Pro', 'Contributor']);
+    expect(s.upgrades.map((p) => p.id), ['contributor']);
+    final c = s.plans.last.limits;
+    expect((c.posts, c.aiPromptsPerHour, c.videoBytes, c.videosAllowed), (null, null, 500000000, true));
+    expect(s.freeLimits.videosAllowed, isFalse);
+    expect(BillingStatus.fromJson(statusJson(plan: 'contributor')).upgrades, isEmpty);
+  });
+
+  test('unlimited AI quota (Contributor) is never out', () {
+    final q = Quota.fromJson({'limit': null, 'used': 140, 'remaining': null, 'unlimited': true, 'plan': 'contributor'});
+    expect((q.isOut, q.isPro, q.upgradeTo), (false, true, null));
+    expect(q.pill, 'Unlimited AI prompts · Contributor');
+    final pro = Quota.fromJson({'limit': 60, 'used': 60, 'remaining': 0, 'plan': 'pro'});
+    expect((pro.isOut, pro.upgradeTo), (true, 'contributor'));
+  });
+
+  test('older servers (free + pro only) still parse', () {
+    final j = statusJson()..remove('plans');
+    final s = BillingStatus.fromJson(j);
+    expect(s.plans.map((p) => p.id), ['free', 'pro']);
+    expect(fmtLimit(null), 'Unlimited');
+    expect(fmtLimit(4000000, fmtBytes), '4 MB');
   });
 
   test('price label and byte formatting', () {
@@ -92,8 +129,10 @@ void main() {
     await t.tap(find.text('go'));
     await t.pumpAndSettle();
     expect(find.text("You've used this hour's AI prompts"), findsOneWidget);
-    expect(find.text('Pay ₹99 with Razorpay'), findsOneWidget);
+    expect(find.text('Get Pro · ₹99'), findsOneWidget);
+    expect(find.text('Get Contributor · ₹499'), findsOneWidget);
     expect(find.text('60'), findsOneWidget); // Pro prompts/hour
+    expect(find.text('Unlimited'), findsWidgets); // Contributor
     expect(find.textContaining('demo bank page'), findsOneWidget);
     expect(find.byType(SnackBar), findsNothing);
 
@@ -116,8 +155,8 @@ void main() {
     await t.pumpWidget(host(statusJson(payments: false), (c) => showPaywall(c)));
     await t.tap(find.text('go'));
     await t.pumpAndSettle();
-    expect(find.text('Outstagram Pro'), findsOneWidget);
-    expect(find.textContaining('Pay '), findsNothing);
+    expect(find.text('Outstagram plans'), findsOneWidget);
+    expect(find.textContaining('Get '), findsNothing);
     expect(find.text("Payments aren't set up on this server yet."), findsOneWidget);
     await t.ensureVisible(find.text('Maybe later'));
     await t.pumpAndSettle();
@@ -125,14 +164,28 @@ void main() {
     await t.pumpAndSettle(); // releases the one-sheet-at-a-time guard for the next test
   });
 
-  testWidgets('Pro users see their pass instead of the offer', (t) async {
+  testWidgets('Pro users see their pass and the Contributor upgrade', (t) async {
     await t.pumpWidget(host(statusJson(plan: 'pro'), (c) => showPaywall(c)));
     await t.tap(find.text('go'));
     await t.pumpAndSettle();
     expect(find.textContaining("You're on Pro until"), findsOneWidget);
-    expect(find.text('Close'), findsOneWidget);
+    expect(find.text('Get Contributor · ₹499'), findsOneWidget);
+    expect(find.textContaining('Get Pro'), findsNothing);
+    await t.ensureVisible(find.text('Maybe later'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Maybe later'));
+    await t.pumpAndSettle();
+  });
+
+  testWidgets('Contributors see the top plan, no offer', (t) async {
+    await t.pumpWidget(host(statusJson(plan: 'contributor'), (c) => showPaywall(c)));
+    await t.tap(find.text('go'));
+    await t.pumpAndSettle();
+    expect(find.textContaining('the top plan'), findsOneWidget);
+    expect(find.textContaining('Get '), findsNothing);
+    await t.ensureVisible(find.text('Close'));
+    await t.pumpAndSettle();
     await t.tap(find.text('Close'));
     await t.pumpAndSettle();
-    expect(find.textContaining('Pay '), findsNothing);
   });
 }

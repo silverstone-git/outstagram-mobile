@@ -131,6 +131,14 @@ Question text is LaTeX with **doubled backslashes** (`$\theta$` in the JSON); `M
 
 ## Billing (implemented in the app, `lib/features/billing/`)
 
+See `docs/TODO.md` §5 for the plan table. `GET /billing/status` adds `plans` [{id, name, price (paise), currency, days,
+limits}], `posts` (count), `contributor_limits`; limits add `video_bytes` (0 = no videos), `media_per_post`, `posts`
+(null = unlimited). `POST /billing/razorpay/order {reason, plan}`. Paywall details carry `needs` (pro|contributor);
+new codes `posts_limit` (402), `video_not_allowed` (403). `POST /media-upload/video {filename, content_type, bytes}` →
+`{upload_url, method: PUT, headers, url, ...}`: PUT the file with those headers and its exact length, store `url`.
+`GET /ai/quota` for Contributor: `{limit: null, remaining: null, unlimited: true}`.
+
+
 - `GET /billing/status` → `{plan: free|pro, valid_until (ISO Z or null), limits, free_limits, pro_limits, usage,
   payments_enabled, test_mode, price: {amount (paise), currency, days}}`. `payments_enabled` is false when the
   server has no Razorpay keys (both prod and staging have **test** keys since 2026-11-24).

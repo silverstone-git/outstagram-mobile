@@ -117,7 +117,23 @@ skill chips (`/ai/skills`), quota pill (`/ai/quota`), tutor library (`/ai/chats`
 (long-press → haptic → `POST /favorites/equations`), voice input (`speech_to_text`). Reference: `QuestionChat.tsx`,
 `TutorMarkdown.tsx`, `TutorLibrary.tsx`.
 
-## 5. P5: Paywall ✅ built (2026-11-24)
+## 5. P5: Paywall ✅ built (2026-11-24), three tiers (2026-11-25)
+
+**Plans (user, 2026-11-25; server PR #12, `lib/plans.py`):**
+
+| | Free | Pro ₹99 / 30 days | Contributor ₹499 / 30 days |
+|---|---|---|---|
+| Photo size (paid plans: compressed lightly, up to 4096 px) | 200 kB | 4 MB | 20 MB |
+| Video size (posted as is, no compression yet) | no videos | 4 MB | 500 MB |
+| Photos + videos per post | 4 | 4 | 4 |
+| Posts | 50 | 400 | unlimited |
+| AI tutor messages / hour | 10 | 60 | unlimited |
+| Saved tutor chats | 10 | 1000 | 1000 |
+
+App: `BillingStatus.plans` (falls back to free + pro on older servers), `Limits` with null = unlimited,
+`PaywallSheet` shows all three columns with a button per upgrade and highlights `detail.needs`; `Quota.unlimited`
+hides the hourly count. Videos upload straight to the private bucket (`SocialApi.uploadVideo`: `POST /media-upload/video`
+→ streamed PUT from the file), so big Contributor videos never sit in memory or pass through Cloud Run.
 
 `lib/features/billing/`: `showError` opens the upgrade sheet for any paywall error (429/402/413 with
 `detail.upgrade`); the tutor opens it on a quota/history limit (and on send when the cached quota is already out);
