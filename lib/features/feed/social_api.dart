@@ -109,6 +109,18 @@ class SocialApi {
   /// Uploads media and returns the URLs to store in the post. Prefers the permanent `public_url`;
   /// `presigned_url` expires after 7 days.
   Future<List<Map<String, String>>> upload(List<UploadFile> files, {void Function(double)? onProgress}) async {
+    // One file per request: a post's photos together can pass Cloud Run's 32 MB request cap
+    // (Contributor photos may be up to 20 MB each).
+    if (files.length > 1) {
+      final total = files.fold<int>(0, (n, f) => n + f.bytes.length).clamp(1, 1 << 62);
+      var done = 0;
+      final out = <Map<String, String>>[];
+      for (final f in files) {
+        out.addAll(await upload([f], onProgress: (p) => onProgress?.call((done + p * f.bytes.length) / total)));
+        done += f.bytes.length;
+      }
+      return out;
+    }
     final form = FormData();
     for (final f in files) {
       form.files.add(MapEntry(
