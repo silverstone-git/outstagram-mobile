@@ -392,6 +392,7 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
                 : ListView(
                     controller: _scroll,
                     // jumping to a saved equation: build every reply so it can scroll itself into view
+                    // ignore: deprecated_member_use (scrollCacheExtent's shape differs; switch with the material_ui migration)
                     cacheExtent: widget.focusLatex != null ? 100000 : null,
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
                     children: [

@@ -232,6 +232,7 @@ class _ResultViewState extends ConsumerState<ResultView> {
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+        // ignore: deprecated_member_use (scrollCacheExtent's shape differs; switch with the material_ui migration)
         cacheExtent: widget.focusLatex != null ? 100000 : null, // build the focused question so it can scroll to itself
         children: [
           ?widget.banner,
