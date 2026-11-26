@@ -13,6 +13,8 @@ import '../account/verify_gate.dart';
 import '../billing/paywall_sheet.dart';
 import '../../core/ui/math_text.dart';
 import '../exams/exam_api.dart';
+import '../../core/ui/equation_menu.dart';
+import 'ai_options.dart';
 import 'models.dart';
 import 'tutor_api.dart';
 import 'tutor_markdown.dart';
@@ -38,11 +40,22 @@ String tutorPath(String attemptId, String questionId) =>
 /// `/tutor/:attemptId/:questionId`: the AI tutor for one question of a saved attempt
 /// (parity with outstagram-web `QuestionChat.tsx`).
 class TutorChatScreen extends ConsumerStatefulWidget {
-  const TutorChatScreen({super.key, required this.attemptId, required this.questionId, this.question});
+  const TutorChatScreen({
+    super.key,
+    required this.attemptId,
+    required this.questionId,
+    this.question,
+    this.focusLatex,
+    this.focusMessageId,
+  });
 
   final String attemptId;
   final String questionId;
   final TutorQuestion? question;
+
+  /// Opened from "Saved equations": scroll to this equation (in reply [focusMessageId]) and pulse it.
+  final String? focusLatex;
+  final int? focusMessageId;
 
   @override
   ConsumerState<TutorChatScreen> createState() => _TutorChatScreenState();
@@ -88,7 +101,7 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
       final m = await ref.read(tutorApiProvider).chat(widget.attemptId, widget.questionId);
       if (!mounted) return;
       setState(() => _messages.addAll(m));
-      _toBottom(jump: true);
+      if (widget.focusLatex == null) _toBottom(jump: true); // else the equation scrolls itself into view
     } catch (e) {
       if (mounted) setState(() => _error = ApiException.from(e).message);
     } finally {
@@ -154,24 +167,34 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
     try {
       final stream = ref
           .read(tutorApiProvider)
-          .ask(widget.attemptId, widget.questionId, msg, skills: _chosen, cancel: cancel);
+          .ask(
+            widget.attemptId,
+            widget.questionId,
+            msg,
+            skills: _chosen,
+            choice: ref.read(tutorPrefsProvider).choice(ref.read(aiOptionsProvider).value),
+            cancel: cancel,
+          );
       await for (final ev in stream) {
         if (!mounted) return;
         switch (ev) {
           case TutorStatus(:final text):
             setState(() => _status = text);
-          case TutorMeta(:final citations):
+          case TutorMeta(:final citations, :final model):
             bot.citations = citations;
+            bot.model = model;
             _status = null;
             _schedulePaint();
           case TutorDelta(:final text):
             bot.content += text;
             _status = null;
             _schedulePaint();
-          case TutorDone(:final message, :final quota):
+          case TutorDone(:final message, :final quota, :final model):
             bot.content = message.content;
             bot.citations = message.citations;
-            ref.read(tutorQuotaProvider.notifier).set(quota);
+            bot.id = message.id;
+            bot.model = model ?? bot.model;
+            if (quota != null && !quota.byok) ref.read(tutorQuotaProvider.notifier).set(quota); // BYOK: own cap
         }
       }
       HapticFeedback.mediumImpact();
@@ -179,14 +202,21 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
       if (!mounted || cancel.isCancelled) return;
       final err = ApiException.from(e is TutorStreamError ? ApiException(e.message) : e);
       final detail = err.detail;
+      var byokOut = false;
       if (err.code == 'ai_quota' && detail is Map && detail['quota'] is Map) {
-        ref.read(tutorQuotaProvider.notifier).set(Quota.fromJson(Map<String, dynamic>.from(detail['quota'] as Map)));
+        final q = Quota.fromJson(Map<String, dynamic>.from(detail['quota'] as Map));
+        byokOut = q.byok;
+        if (!q.byok) ref.read(tutorQuotaProvider.notifier).set(q);
       }
       final q = ref.read(tutorQuotaProvider);
       setState(() {
         _messages.removeRange(_messages.length - 2, _messages.length);
         _draft.text = msg;
-        _error = err.code == 'ai_quota' ? '${err.message}${q?.resetHint ?? ''}' : err.message;
+        _error = byokOut
+            ? 'Your own-key prompts for this hour are used up.'
+            : err.code == 'ai_quota'
+            ? '${err.message}${q?.resetHint ?? ''}'
+            : err.message;
       });
       if (!showPaywallFor(context, err)) showVerifyEmailFor(context, err);
     } finally {
@@ -202,43 +232,21 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
     }
   }
 
-  Future<void> _favourite(PickedEquation eq, TutorQuestion? q) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final fav = await ref
-          .read(tutorApiProvider)
-          .addFavorite(
-            latex: eq.latex,
-            display: eq.display,
-            skill: _chosen.firstOrNull,
-            context: q == null ? null : (q.text.length > 300 ? q.text.substring(0, 300) : q.text),
-            attemptId: widget.attemptId,
-            questionId: widget.questionId,
-          );
-      ref.invalidate(favoriteEquationsProvider);
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: const Text('Equation saved to favourites'),
-            // Flutter keeps action snackbars up until dismissed by default.
-            persist: false,
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Undo',
-              onPressed: () => ref
-                  .read(tutorApiProvider)
-                  .deleteFavorite(fav.id)
-                  .then((_) => ref.invalidate(favoriteEquationsProvider), onError: (_) {}),
-            ),
-          ),
-        );
-    } catch (e) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(ApiException.from(e).message)));
-    }
-  }
+  /// Long-press an equation in a reply: the equation menu (save remembers this reply).
+  void _equation(PickedEquation eq, ChatMessage m, TutorQuestion? q) => showEquationMenu(
+    context,
+    ref,
+    eq.latex,
+    eq.display,
+    EquationSource(
+      source: 'tutor',
+      attemptId: widget.attemptId,
+      questionId: widget.questionId,
+      messageId: m.id,
+      skill: _chosen.firstOrNull,
+      context: q == null ? null : (q.text.length > 300 ? q.text.substring(0, 300) : q.text),
+    ),
+  );
 
   Future<void> _toggleVoice() async {
     if (_listening) {
@@ -328,6 +336,11 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Model, thinking, your own API key',
+            icon: const Icon(Icons.tune_rounded),
+            onPressed: () => showTutorSettings(context),
+          ),
+          IconButton(
             tooltip: 'Tutor library',
             icon: const Icon(Icons.collections_bookmark_outlined),
             onPressed: () => context.push('/tutor'),
@@ -337,6 +350,16 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
       body: Column(
         children: [
           if (question != null) _QuestionHeader(question: question),
+          if (ref.watch(tutorPrefsProvider).label(ref.watch(aiOptionsProvider).value) case final who?)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+              child: ActionChip(
+                avatar: const Icon(Icons.tune_rounded, size: 16),
+                label: Text(who),
+                visualDensity: VisualDensity.compact,
+                onPressed: () => showTutorSettings(context),
+              ),
+            ),
           if (skills != null && skills.skills.length > 1)
             SizedBox(
               height: 44,
@@ -368,12 +391,24 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : ListView(
                     controller: _scroll,
+                    // jumping to a saved equation: build every reply so it can scroll itself into view
+                    // scrollCacheExtent replaces this; switch with the material_ui migration (docs/TODO.md §9)
+                    // ignore: deprecated_member_use
+                    cacheExtent: widget.focusLatex != null ? 100000 : null,
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
                     children: [
                       if (_messages.isEmpty) _Intro(chosen: _chosen, busy: _busy, onPick: _send),
                       for (final m in _messages)
                         if (!(m == last && !m.isUser && m.content.isEmpty && _busy))
-                          _Bubble(message: m, onPickEquation: (eq) => _favourite(eq, question), onTapLink: _openLink),
+                          _Bubble(
+                            message: m,
+                            onPickEquation: (eq) => _equation(eq, m, question),
+                            onTapLink: _openLink,
+                            highlight: widget.focusLatex != null &&
+                                    (widget.focusMessageId == null || widget.focusMessageId == m.id)
+                                ? widget.focusLatex
+                                : null,
+                          ),
                       if (_busy && (last?.content.isEmpty ?? true))
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
@@ -510,9 +545,10 @@ class _Intro extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.onPickEquation, required this.onTapLink});
+  const _Bubble({required this.message, required this.onPickEquation, required this.onTapLink, this.highlight});
 
   final ChatMessage message;
+  final String? highlight;
   final ValueChanged<PickedEquation> onPickEquation;
   final void Function(String) onTapLink;
 
@@ -554,7 +590,12 @@ class _Bubble extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TutorMarkdown(m.content, onPickEquation: onPickEquation, onTapLink: onTapLink),
+          TutorMarkdown(m.content, onPickEquation: onPickEquation, onTapLink: onTapLink, highlight: highlight),
+          if (m.model != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(m.model!, style: TextStyle(fontSize: 10.5, color: cs.onSurfaceVariant)),
+            ),
           if (m.citations.isNotEmpty) ...[
             const SizedBox(height: 8),
             Divider(height: 1, color: cs.outlineVariant),

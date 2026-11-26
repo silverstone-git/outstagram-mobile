@@ -4,6 +4,8 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:markdown/markdown.dart' as md;
 
+import '../../core/ui/equation_menu.dart';
+
 /// An equation the student long-pressed.
 class PickedEquation {
   const PickedEquation(this.latex, {required this.display});
@@ -72,10 +74,11 @@ class _MathInlineSyntax extends md.InlineSyntax {
 }
 
 class _MathBuilder extends MarkdownElementBuilder {
-  _MathBuilder({required this.display, required this.onPick});
+  _MathBuilder({required this.display, required this.onPick, this.highlight});
 
   final bool display;
   final ValueChanged<PickedEquation>? onPick;
+  final String? highlight;
 
   @override
   bool isBlockElement() => display;
@@ -89,16 +92,20 @@ class _MathBuilder extends MarkdownElementBuilder {
   ) {
     final tex = element.attributes['tex'] ?? '';
     final style = DefaultTextStyle.of(context).style.merge(parentStyle).merge(preferredStyle);
-    Widget pressable(Widget child) => onPick == null
-        ? child
-        : GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onLongPress: () {
-              HapticFeedback.mediumImpact();
-              onPick!(PickedEquation(tex, display: display));
-            },
-            child: child,
-          );
+    final lit = highlight != null && eqKey(highlight!) == eqKey(tex);
+    Widget pressable(Widget child) {
+      final c = lit ? EquationPulse(child: child) : child;
+      if (onPick == null) return c;
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onLongPress: () {
+          HapticFeedback.mediumImpact();
+          onPick!(PickedEquation(tex, display: display));
+        },
+        child: c,
+      );
+    }
+
     final math = Math.tex(
       tex,
       mathStyle: display ? MathStyle.display : MathStyle.text,
@@ -113,7 +120,12 @@ class _MathBuilder extends MarkdownElementBuilder {
     }
     // A Text.rich is merged into the paragraph by flutter_markdown, so inline math flows with the text.
     // texBreak splits long formulas at operators so they wrap (and puts back the space it drops).
-    final parts = math.texBreak().parts;
+    List<Widget> parts;
+    try {
+      parts = lit ? [math] : math.texBreak().parts;
+    } catch (_) {
+      parts = [math];
+    }
     return Text.rich(
       TextSpan(
         children: [
@@ -133,10 +145,13 @@ class _MathBuilder extends MarkdownElementBuilder {
 
 /// Tutor answer: GitHub-flavoured Markdown + LaTeX. Long-press an equation to call [onPickEquation].
 class TutorMarkdown extends StatelessWidget {
-  const TutorMarkdown(this.text, {super.key, this.onPickEquation, this.onTapLink});
+  const TutorMarkdown(this.text, {super.key, this.onPickEquation, this.onTapLink, this.highlight});
 
   final String text;
   final ValueChanged<PickedEquation>? onPickEquation;
+
+  /// LaTeX of an equation to scroll to and pulse (opened from "Saved equations").
+  final String? highlight;
   final void Function(String href)? onTapLink;
 
   @override
@@ -151,8 +166,8 @@ class TutorMarkdown extends StatelessWidget {
       blockSyntaxes: [_MathBlockSyntax()],
       inlineSyntaxes: [_MathInlineSyntax()],
       builders: {
-        'math': _MathBuilder(display: false, onPick: onPickEquation),
-        'mathblock': _MathBuilder(display: true, onPick: onPickEquation),
+        'math': _MathBuilder(display: false, onPick: onPickEquation, highlight: highlight),
+        'mathblock': _MathBuilder(display: true, onPick: onPickEquation, highlight: highlight),
       },
       onTapLink: (_, href, _) {
         if (href != null) onTapLink?.call(href);

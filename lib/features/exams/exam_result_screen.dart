@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/net/api_error.dart';
+import '../../core/ui/equation_menu.dart';
 import '../../core/ui/math_text.dart';
 import 'engine/engine.dart';
 import '../tutor/tutor_chat_screen.dart';
@@ -16,9 +17,13 @@ import '../streak/streak_celebration.dart';
 
 /// A past attempt, loaded from the server (`/exam/attempt/:id`).
 class AttemptScreen extends ConsumerWidget {
-  const AttemptScreen({super.key, required this.attemptId});
+  const AttemptScreen({super.key, required this.attemptId, this.focusQuestionId, this.focusLatex});
 
   final String attemptId;
+
+  /// Opened from "Saved equations": open this question and pulse the equation.
+  final String? focusQuestionId;
+  final String? focusLatex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,7 +39,13 @@ class AttemptScreen extends ConsumerWidget {
           child: Padding(padding: const EdgeInsets.all(32), child: Text(ApiException.from(e).message)),
         ),
       ),
-      data: (a) => ResultView(result: a.result, maxScore: a.summary.maxScore, attemptId: a.summary.id),
+      data: (a) => ResultView(
+        result: a.result,
+        maxScore: a.summary.maxScore,
+        attemptId: a.summary.id,
+        focusQuestionId: focusQuestionId,
+        focusLatex: focusLatex,
+      ),
     );
   }
 }
@@ -132,7 +143,7 @@ enum _Save { saving, saved, failed, queued }
 
 enum _Filter { all, wrong, skipped, flagged }
 
-class ResultView extends StatefulWidget {
+class ResultView extends ConsumerStatefulWidget {
   const ResultView({
     super.key,
     required this.result,
@@ -141,7 +152,12 @@ class ResultView extends StatefulWidget {
     this.leftApp = 0,
     this.banner,
     this.onRetake,
+    this.focusQuestionId,
+    this.focusLatex,
   });
+
+  final String? focusQuestionId;
+  final String? focusLatex;
 
   final ExamResult result;
   final double maxScore;
@@ -153,12 +169,32 @@ class ResultView extends StatefulWidget {
   final VoidCallback? onRetake;
 
   @override
-  State<ResultView> createState() => _ResultViewState();
+  ConsumerState<ResultView> createState() => _ResultViewState();
 }
 
-class _ResultViewState extends State<ResultView> {
+class _ResultViewState extends ConsumerState<ResultView> {
   _Filter _filter = _Filter.all;
   final _open = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.focusQuestionId != null) _open.add(widget.focusQuestionId!);
+  }
+
+  /// Long-press an equation in the review: the equation menu (save remembers the question).
+  void _equation(Question q, String source, String latex, bool display) => showEquationMenu(
+    context,
+    ref,
+    latex,
+    display,
+    EquationSource(
+      source: source,
+      attemptId: widget.attemptId,
+      questionId: q.id,
+      context: q.question.length > 300 ? q.question.substring(0, 300) : q.question,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -196,6 +232,9 @@ class _ResultViewState extends State<ResultView> {
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+        // scrollCacheExtent replaces this; switch with the material_ui migration (docs/TODO.md §9)
+        // ignore: deprecated_member_use
+        cacheExtent: widget.focusLatex != null ? 100000 : null, // build the focused question so it can scroll to itself
         children: [
           ?widget.banner,
           Card(
@@ -392,6 +431,8 @@ class _ResultViewState extends State<ResultView> {
                       extra: TutorQuestion(text: q.question, topic: q.topic, examTitle: r.examName),
                     ),
               onToggle: () => setState(() => _open.contains(q.id) ? _open.remove(q.id) : _open.add(q.id)),
+              onPick: (source, latex, display) => _equation(q, source, latex, display),
+              highlight: q.id == widget.focusQuestionId ? widget.focusLatex : null,
             ),
         ],
       ),
@@ -407,8 +448,13 @@ class _ReviewCard extends StatelessWidget {
     required this.open,
     required this.onToggle,
     this.onAskTutor,
+    this.onPick,
+    this.highlight,
   });
 
+  /// (source: question | option | explanation, latex, display)
+  final void Function(String source, String latex, bool display)? onPick;
+  final String? highlight;
   final int number;
   final Question question;
   final UserAnswer? answer;
@@ -453,7 +499,13 @@ class _ReviewCard extends StatelessWidget {
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: MathText(q.question, maxLines: open ? null : 2, style: const TextStyle(fontSize: 14)),
+                      child: MathText(
+                        q.question,
+                        maxLines: open ? null : 2,
+                        style: const TextStyle(fontSize: 14),
+                        onPickEquation: open && onPick != null ? (l, d) => onPick!('question', l, d) : null,
+                        highlight: open ? highlight : null,
+                      ),
                     ),
                   ),
                   if (a?.isFlagged ?? false) Icon(Icons.flag_rounded, size: 18, color: cs.tertiary),
@@ -537,7 +589,14 @@ class _ReviewCard extends StatelessWidget {
                                       ? Icon(Icons.close_rounded, size: 18, color: cs.error)
                                       : null,
                                 ),
-                                Expanded(child: MathText(o.value, style: const TextStyle(fontSize: 14))),
+                                Expanded(
+                                  child: MathText(
+                                    o.value,
+                                    style: const TextStyle(fontSize: 14),
+                                    onPickEquation: onPick == null ? null : (l, d) => onPick!('option', l, d),
+                                    highlight: highlight,
+                                  ),
+                                ),
                                 if (mine)
                                   Text(
                                     'YOURS',
@@ -564,7 +623,12 @@ class _ReviewCard extends StatelessWidget {
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: cs.onSurfaceVariant),
                           ),
                           const SizedBox(height: 4),
-                          MathText(q.explanation, style: const TextStyle(fontSize: 14, height: 1.4)),
+                          MathText(
+                            q.explanation,
+                            style: const TextStyle(fontSize: 14, height: 1.4),
+                            onPickEquation: onPick == null ? null : (l, d) => onPick!('explanation', l, d),
+                            highlight: highlight,
+                          ),
                         ],
                       ),
                     ),

@@ -33,16 +33,22 @@ List<Citation> _citations(Object? v) =>
     v is List ? [for (final c in v) if (c is Map) Citation.fromJson(_map(c))] : const [];
 
 class ChatMessage {
-  ChatMessage({required this.role, required this.content, this.citations = const [], DateTime? sentAt})
+  ChatMessage({required this.role, required this.content, this.citations = const [], DateTime? sentAt, this.id, this.model})
     : sentAt = sentAt ?? DateTime.now();
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
+    id: (j['id'] as num?)?.toInt(),
     role: '${j['role'] ?? 'assistant'}',
     content: '${j['content'] ?? ''}',
     citations: _citations(j['citations']),
     sentAt: parseServerTime(j['datetime_sent']),
   );
 
+  /// Server id (null while streaming); saved equations point at it.
+  int? id;
+
+  /// What answered when it wasn't the default model ("Gemini Flash", "Your key · gpt-…").
+  String? model;
   final String role;
   String content;
   List<Citation> citations;
@@ -59,6 +65,7 @@ class Quota {
     this.resetsAt,
     this.plan,
     this.unlimited = false,
+    this.byok = false,
   });
 
   factory Quota.fromJson(Map<String, dynamic> j) {
@@ -70,6 +77,7 @@ class Quota {
       resetsAt: parseServerTime(j['resets_at']),
       plan: j['plan'] as String?,
       unlimited: unlimited,
+      byok: j['byok'] == true,
     );
   }
 
@@ -79,6 +87,9 @@ class Quota {
   final DateTime? resetsAt;
   final String? plan;
   final bool unlimited; // Contributor
+
+  /// The separate cap of prompts answered with the student's own API key.
+  final bool byok;
 
   bool get isOut => !unlimited && remaining <= 0;
   bool get isPro => plan == 'pro' || plan == 'contributor';
@@ -202,6 +213,9 @@ class FavoriteEquation {
     this.context,
     this.attemptId,
     this.questionId,
+    this.messageId,
+    this.postId,
+    this.source,
   });
 
   factory FavoriteEquation.fromJson(Map<String, dynamic> j) => FavoriteEquation(
@@ -212,6 +226,9 @@ class FavoriteEquation {
     context: j['context'] as String?,
     attemptId: j['attempt_id'] as String?,
     questionId: j['question_id'] as String?,
+    messageId: (j['message_id'] as num?)?.toInt(),
+    postId: j['post_id'] as String?,
+    source: j['source'] as String?,
   );
 
   final int id;
@@ -221,6 +238,21 @@ class FavoriteEquation {
   final String? context;
   final String? attemptId;
   final String? questionId;
+
+  /// Where it was saved: a tutor reply ([messageId]), the question / an option / the explanation of an
+  /// exam review, or a post ([postId]). Old favourites have no source; with an attempt they're tutor ones.
+  final int? messageId;
+  final String? postId;
+  final String? source;
+
+  String get from => switch (source) {
+    'tutor' => 'AI tutor',
+    'explanation' => 'Explanation',
+    'question' => 'Question',
+    'option' => 'Answer option',
+    'post' => 'Post',
+    _ => attemptId != null ? 'AI tutor' : '',
+  };
 }
 
 /// One event of `POST /exam-attempts/{id}/chat/stream`.
@@ -234,8 +266,9 @@ class TutorStatus extends TutorEvent {
 }
 
 class TutorMeta extends TutorEvent {
-  const TutorMeta(this.citations);
+  const TutorMeta(this.citations, {this.model});
   final List<Citation> citations;
+  final String? model;
 }
 
 class TutorDelta extends TutorEvent {
@@ -244,23 +277,27 @@ class TutorDelta extends TutorEvent {
 }
 
 class TutorDone extends TutorEvent {
-  const TutorDone(this.message, this.quota);
+  const TutorDone(this.message, this.quota, {this.model});
   final ChatMessage message;
   final Quota? quota;
+  final String? model;
 }
 
 /// Maps a decoded SSE event to a [TutorEvent]. `error` events throw [TutorStreamError].
 TutorEvent? tutorEventFrom(String event, Map<String, dynamic> data) => switch (event) {
   'status' => TutorStatus('${data['text'] ?? ''}'),
-  'meta' => TutorMeta(_citations(data['citations'])),
+  'meta' => TutorMeta(_citations(data['citations']), model: data['model'] as String?),
   'delta' => TutorDelta('${data['text'] ?? ''}'),
   'done' => TutorDone(
     ChatMessage.fromJson(_map(data['message'])),
     data['quota'] is Map ? Quota.fromJson(_map(data['quota'])) : null,
+    model: data['model'] as String?,
   ),
   'error' => throw TutorStreamError(
     data['status'] == 502
-        ? 'The AI tutor is unavailable right now. Your prompt was not counted.'
+        ? ('${data['detail'] ?? ''}'.startsWith('Your API provider')
+            ? '${data['detail']}. Your prompt was not counted.'
+            : 'The AI tutor is unavailable right now. Your prompt was not counted.')
         : '${data['detail'] ?? 'Something went wrong'}',
   ),
   _ => null,

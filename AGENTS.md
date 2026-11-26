@@ -12,7 +12,8 @@ status, the repository map and the commands. Deep dives live in `docs/`:
 | `docs/qa.md` | On-device QA loop, rules (the phone is the user's), what can't be tested, lessons (helpers: `tool/qa/qa.sh`) |
 | `PLAN.md` | The original product/architecture plan (phases P0–P7, mobile-only extras). Background, not status |
 
-Last updated: 2026-11-25 (social basics, App Links, streak freezes/friends/widget, offline packs, local alerts, videos,
+Last updated: 2026-11-26 (equation menu everywhere + jump-back, tutor model/thinking/BYOK, follow-request badge and
+notifications, account export/delete, cached first pages and stable image cache keys; social basics, App Links, streak freezes/friends/widget, offline packs, local alerts, videos,
 Free/Pro/Contributor plans, friends' APK link).
 
 ---
@@ -55,7 +56,7 @@ advantages (see `PLAN.md` §5).
 | P4 AI tutor | SSE streaming, Markdown + LaTeX, skills, quota, library, saved equations, voice input | ✅ built 2026-11-24 (unit/widget tested; on-device QA pending, `docs/TODO.md` §4) |
 | P5 Paywall | 429/402/403/413 → upgrade sheet, Razorpay test; Free / Pro ₹99 / Contributor ₹499 | ✅ built 2026-11-24, three tiers 2026-11-25 (limits table in `docs/TODO.md` §5; prod on Razorpay test keys) |
 | P6 Mobile extras | Push, share-target, result cards, App Links, offline packs | ✅ built 2026-11-25: result cards, share-target (photos, text, videos), shortcuts, streak + freezes + friends + home widget, local alerts (exam time left, tutor back), offline packs, App Links (needs `assetlinks.json` uploaded, `docs/TODO.md` §7); push dropped (no Firebase). On-device QA pending |
-| P7 Release | Upload key, Play Billing, account deletion, Play listing | ⏳ |
+| P7 Release | Upload key, Play Billing, account deletion, Play listing | ⏳ (account deletion + data export built 2026-11-26) |
 
 **Testing setup decided by the user (2026-11-24):** the *prod* flavor talks to the **production** outsie +
 database, and friends test on prod. Test posts and accounts get cleaned up by hand before the public release.
@@ -84,8 +85,11 @@ lib/
     net/
       api_client.dart            dioProvider + AuthInterceptor (pre-expiry refresh, 401 → refresh → retry once), Api wrapper
       api_error.dart             ApiException (FastAPI detail parsing, isPaywall, isNetwork)
+      json_cache.dart            JsonCache: first page of feed/explore/profile posts on disk (stale-while-revalidate), cleared on account change
     ui/
-      math_text.dart             MathText: inline/display LaTeX (flutter_math_fork), web-compatible clean-up
+      math_text.dart             MathText: inline/display LaTeX (flutter_math_fork), web-compatible clean-up; onPickEquation, highlight
+      equation_menu.dart         long-press equation menu (blurred backdrop, lifted equation: save / copy LaTeX / copy Markdown),
+                                 EquationSource (tutor | question | option | explanation | post), EquationPulse (jump-back highlight)
       avatar.dart                Avatar: profile photo (cached by object path, re-signed URLs share a cache entry) over a letter avatar
       feedback.dart              showError(context, e): snackbar, the upgrade sheet for paywall errors, the confirm-email sheet for 403 email_unverified
       code_field.dart            CodeField (6 boxes over one hidden field, autofill + paste, auto-submit), ResendButton (60 s)
@@ -93,7 +97,8 @@ lib/
     auth/                        sign-in, register, splash, BrandMark (SVG mark + "Outsta"/"gram" text) and BrandSymbol,
                                  email_code_screen.dart (/sign-in/email), email_link_screen.dart (/email-link: magic links, App Links),
                                  forgot_password_screen.dart (/forgot-password, /account/password)
-    account/                     account_api.dart (GET /me → meProvider, confirm/change email), verify_email_screen.dart (/verify-email),
+    account/                     your_data.dart (/account: download my data = GET /me/export shared as JSON, delete my account = POST /me/delete),
+                                 account_api.dart (GET /me → meProvider, confirm/change email), verify_email_screen.dart (/verify-email),
                                  account_screen.dart (/account, /account/email, VerifyEmailBanner), verify_gate.dart (403 → sheet)
     streak/                      streak_api.dart (StreakStatus incl. freezes, streakProvider, friendStreaksProvider),
                                  streak_widget.dart (home-screen widget data), local_alerts.dart (exam time left, tutor back),
@@ -110,6 +115,8 @@ lib/
                                  follow_list_screen.dart (/u/:u/followers|following, unfollow, remove follower),
                                  edit_profile_screen.dart (/profile/edit: name, bio → PUT /me)
     activity/activity_screen.dart follow requests + approve
+    activity/follow_requests.dart followRequestsProvider (polled every minute in the foreground by AppShell, on resume),
+                                 badge count, local notification for requests this phone hasn't seen (no push server)
     compose/compose_screen.dart  pick/camera → WebP (plan's media limit) → /media-upload/bulk → /posts; postsVersionProvider
     compose/compose_draft.dart   composeDraftProvider: images/caption/category the composer takes when it opens
     compose/share_intent.dart    ShareIntentListener ("Share to Outstagram", receive_sharing_intent) → draft → /create
@@ -134,7 +141,8 @@ lib/
       sse.dart                   decodeSse: byte stream → SSE events (chunk-boundary/CRLF/UTF-8 safe)
       tutor_api.dart             chat history, ask() stream, skills/quota/threads/favourites; providers; streamError()
       tutor_markdown.dart        TutorMarkdown (flutter_markdown_plus + $ math syntaxes), normalizeMath (web port), long-press pick
-      tutor_chat_screen.dart     /tutor/:attemptId/:questionId: header, skill chips, streaming bubbles, citations, voice, quota
+      tutor_chat_screen.dart     /tutor/:attemptId/:questionId[?eq=&mid=]: header, skill chips, streaming bubbles, citations, voice, quota
+      ai_options.dart            Pro/Contributor tutor settings (GET /ai/options): model, thinking level, BYOK (key in the keystore)
       tutor_library_screen.dart  /tutor: Chats (usage bar, delete) and Equations (copy, delete, open chat)
 test/auth_test.dart              interceptor/refresh/sign-in/ApiException tests with a fake Dio adapter
 test/exam_engine_test.dart       golden tests: must match outstagram-web's engine.ts exactly (fixtures/exam_golden.json)
@@ -299,6 +307,11 @@ Host specifics (Windows): device ids, tool paths, cloud project ids and the QA a
     Tests draw text with no family in a box font, so the theme takes `debugFontFamily` / `debugFontFamilyFallback`
     (null in the app). Package fonts (KaTeX) and plugins (share intent, home widget, wakelock) are stubbed in the
     harness. Never use real users' posts or photos there.
+43. **Presigned media URLs change on every fetch** (the server re-signs them), so `CachedNetworkImage` must use
+    `cacheKey: Avatar.cacheKey(url)` (the object path) or every image is downloaded again on each refresh.
+44. **Jumping to a saved equation** needs the target built: screens that pulse one (`EquationPulse`) set a huge
+    `cacheExtent` on their ListView while focusing, because ListView only builds what's near the viewport.
+
 42. **Question-bank LaTeX doubles every backslash.** `cleanLatex` collapses `\\` before letters and the spacing commands
     (`\\,` `\\;` `\\:` `\\!`), the same as the web's `Latex.tsx`. A leftover `\\,` reads as a row break and made
     `texBreak` throw (now caught in `MathText`).

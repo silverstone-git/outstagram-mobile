@@ -71,12 +71,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               key: ValueKey('feed-${_category?.name}-$v'),
               pageSize: 20,
               loader: (page) => api.feed(page, category: _category),
+              cached: () => api.cachedFeed(category: _category),
               empty: _EmptyFeed(onExplore: () => DefaultTabController.of(context).animateTo(1), color: cs.primary),
             ),
             PostList(
               key: ValueKey('explore-${_category?.name}-$v'),
               pageSize: 20,
               loader: (page) => api.explore(page, category: _category),
+              cached: () => api.cachedExplore(category: _category),
               empty: const Padding(
                 padding: EdgeInsets.all(48),
                 child: Center(child: Text('Nothing here yet. Be the first to post!')),

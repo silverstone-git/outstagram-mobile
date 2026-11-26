@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/auth/auth_controller.dart';
+import '../core/net/json_cache.dart';
 import '../features/account/account_api.dart';
+import '../features/activity/follow_requests.dart';
+import '../features/profile/profile_view.dart' show profileProvider, myStatsProvider;
 import '../features/compose/share_intent.dart';
 import '../features/streak/streak_api.dart';
 import '../features/streak/streak_reminders.dart';
@@ -32,6 +36,9 @@ class _OutstagramAppState extends ConsumerState<OutstagramApp> {
       onResume: () {
         if (ref.read(streakProvider).hasValue) ref.read(streakProvider.notifier).reload();
         ref.invalidate(meProvider);
+        // follower counts may have changed while away (someone followed, a request was approved elsewhere)
+        ref.invalidate(profileProvider);
+        ref.invalidate(myStatsProvider);
       },
     );
   }
@@ -46,6 +53,13 @@ class _OutstagramAppState extends ConsumerState<OutstagramApp> {
   Widget build(BuildContext context) {
     // Keep the streak loaded (and reminders planned) for as long as someone is signed in.
     ref.listen(streakProvider, (_, _) {});
+    // Another account signs in: forget the previous one's requests and profile counts.
+    ref.listen(authControllerProvider.select((s) => s.value?.user.username), (prev, next) {
+      if (prev == next) return;
+      ref.invalidate(followRequestsProvider);
+      ref.invalidate(profileProvider);
+      if (prev != null) JsonCache.clear(); // cached feed/profile pages belong to the previous account
+    });
     return MaterialApp.router(
       title: 'Outstagram',
       debugShowCheckedModeBanner: false,

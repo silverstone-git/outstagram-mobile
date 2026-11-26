@@ -8,10 +8,9 @@ import '../../core/ui/avatar.dart';
 import '../../core/ui/feedback.dart';
 import '../feed/models.dart';
 import '../feed/social_api.dart';
+import '../profile/profile_view.dart' show profileProvider;
+import 'follow_requests.dart';
 
-final followRequestsProvider = FutureProvider.autoDispose<List<FollowRequest>>(
-  (ref) => ref.watch(socialApiProvider).followRequests(),
-);
 
 class ActivityScreen extends ConsumerWidget {
   const ActivityScreen({super.key});
@@ -23,7 +22,7 @@ class ActivityScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Activity')),
       body: RefreshIndicator(
-        onRefresh: () => ref.refresh(followRequestsProvider.future),
+        onRefresh: () => ref.read(followRequestsProvider.notifier).reload(),
         child: requests.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => ListView(children: [
@@ -78,6 +77,8 @@ class _RequestTileState extends ConsumerState<_RequestTile> {
       await (approve ? api.approve(widget.request.id) : api.reject(widget.request.id));
       approve ? HapticFeedback.mediumImpact() : HapticFeedback.lightImpact();
       setState(() => _outcome = approve ? 'Approved' : 'Declined');
+      ref.read(followRequestsProvider.notifier).markAnswered(widget.request.id);
+      if (approve) ref.invalidate(profileProvider); // your follower count went up
     } catch (e) {
       if (mounted) showError(context, e);
     } finally {

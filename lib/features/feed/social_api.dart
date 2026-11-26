@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -5,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/net/api_client.dart';
+import '../../core/net/json_cache.dart';
 import '../../core/net/api_error.dart';
 import 'models.dart';
 
@@ -26,14 +29,41 @@ class SocialApi {
 
   List<Post> _posts(List<dynamic> l) => [for (final p in l) Post.fromJson(p as Map<String, dynamic>)];
 
-  Future<List<Post>> feed(int page, {PostCategory? category}) async => _posts(await _api.get<List<dynamic>>(
-      '/feed', query: {'page': page, 'category': ?category?.label}));
+  /// Page 1 is also written to [JsonCache]; [cachedFeed] & co. read it back for an instant first paint.
+  Future<List<Post>> _page(String path, int page, [Map<String, dynamic>? query]) async {
+    final raw = await _api.get<List<dynamic>>(path, query: {...?query, if (!path.contains('/posts/')) 'page': page});
+    if (page == 1) unawaited(JsonCache.write(_cacheKey(path, query), raw));
+    return _posts(raw);
+  }
 
-  Future<List<Post>> explore(int page, {PostCategory? category}) async => _posts(await _api.get<List<dynamic>>(
-      '/explore', query: {'page': page, 'category': ?category?.label}));
+  static String _cacheKey(String path, Map<String, dynamic>? query) =>
+      '$path?${(query ?? const {}).entries.where((e) => e.value != null).map((e) => '${e.key}=${e.value}').join('&')}';
 
-  Future<List<Post>> userPosts(String username, int page) async =>
-      _posts(await _api.get<List<dynamic>>('/users/${Uri.encodeComponent(username)}/posts/$page'));
+  Future<List<Post>?> _cached(String path, [Map<String, dynamic>? query]) async {
+    final raw = await JsonCache.read(_cacheKey(path, query));
+    if (raw is! List) return null;
+    try {
+      return _posts(raw);
+    } catch (_) {
+      return null; // an older app version's shape
+    }
+  }
+
+  Future<List<Post>> feed(int page, {PostCategory? category}) =>
+      _page('/feed', page, {'category': ?category?.label});
+
+  Future<List<Post>?> cachedFeed({PostCategory? category}) => _cached('/feed', {'category': ?category?.label});
+
+  Future<List<Post>> explore(int page, {PostCategory? category}) =>
+      _page('/explore', page, {'category': ?category?.label});
+
+  Future<List<Post>?> cachedExplore({PostCategory? category}) => _cached('/explore', {'category': ?category?.label});
+
+  Future<List<Post>> userPosts(String username, int page) =>
+      _page('/users/${Uri.encodeComponent(username)}/posts/$page', page);
+
+  Future<List<Post>?> cachedUserPosts(String username) =>
+      _cached('/users/${Uri.encodeComponent(username)}/posts/1');
 
   Future<void> like(String postId) => _api.post<dynamic>('/posts/$postId/like');
 

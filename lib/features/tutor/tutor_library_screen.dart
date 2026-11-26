@@ -195,6 +195,17 @@ class _Chats extends ConsumerWidget {
   }
 }
 
+/// Where a saved equation came from, as a route that scrolls to it and pulses it; null if unknown.
+String? equationLocation(FavoriteEquation f) {
+  final eq = Uri.encodeQueryComponent(f.latex);
+  if (f.source == 'post' && f.postId != null) return '/p/${Uri.encodeComponent(f.postId!)}?eq=$eq';
+  if (f.attemptId == null || f.questionId == null) return null;
+  if (f.source == 'question' || f.source == 'option' || f.source == 'explanation') {
+    return '/exam/attempt/${Uri.encodeComponent(f.attemptId!)}?q=${Uri.encodeQueryComponent(f.questionId!)}&eq=$eq';
+  }
+  return '${tutorPath(f.attemptId!, f.questionId!)}?eq=$eq${f.messageId != null ? '&mid=${f.messageId}' : ''}';
+}
+
 class _Equations extends ConsumerWidget {
   const _Equations();
 
@@ -232,7 +243,7 @@ class _Equations extends ConsumerWidget {
                     Icon(Icons.star_outline_rounded, color: cs.onSurfaceVariant),
                     const SizedBox(height: 8),
                     Text(
-                      'Long-press any equation in a tutor answer to save it here.',
+                      'Long-press any equation in a tutor answer, an exam review or a post to save it here.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: cs.onSurfaceVariant),
                     ),
@@ -242,7 +253,10 @@ class _Equations extends ConsumerWidget {
             for (final f in favs)
               Card(
                 margin: const EdgeInsets.only(bottom: 8),
-                child: Padding(
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: equationLocation(f) == null ? null : () => context.push(equationLocation(f)!),
+                  child: Padding(
                   padding: const EdgeInsets.fromLTRB(14, 12, 4, 4),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -261,6 +275,7 @@ class _Equations extends ConsumerWidget {
                           Expanded(
                             child: Text(
                               [
+                                if (f.from.isNotEmpty) f.from,
                                 if (f.skill != null) f.skill!.replaceAll('-', ' '),
                                 if (f.context != null) f.context!,
                               ].join(' · '),
@@ -269,12 +284,12 @@ class _Equations extends ConsumerWidget {
                               style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                             ),
                           ),
-                          if (f.attemptId != null && f.questionId != null)
+                          if (equationLocation(f) case final loc?)
                             IconButton(
-                              tooltip: 'Open the chat',
-                              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+                              tooltip: 'Open where you saved it',
+                              icon: const Icon(Icons.open_in_new_rounded, size: 20),
                               color: cs.onSurfaceVariant,
-                              onPressed: () => context.push(tutorPath(f.attemptId!, f.questionId!)),
+                              onPressed: () => context.push(loc),
                             ),
                           IconButton(
                             tooltip: 'Copy LaTeX',
@@ -297,6 +312,7 @@ class _Equations extends ConsumerWidget {
                       ),
                     ],
                   ),
+                ),
                 ),
               ),
           ],

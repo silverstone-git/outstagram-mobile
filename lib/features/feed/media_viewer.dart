@@ -1,4 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
+
+import '../../core/ui/avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
@@ -145,6 +147,7 @@ class _ZoomableImageState extends State<ZoomableImage> with SingleTickerProvider
         child: SizedBox.expand(
           child: CachedNetworkImage(
             imageUrl: widget.url,
+            cacheKey: Avatar.cacheKey(widget.url), // same entry as the feed's copy
             fit: BoxFit.contain,
             placeholder: (_, _) => const Center(child: CircularProgressIndicator(color: Colors.white)),
             errorWidget: (_, _, _) => const Center(child: Icon(Icons.broken_image_outlined, color: Colors.white54, size: 48)),

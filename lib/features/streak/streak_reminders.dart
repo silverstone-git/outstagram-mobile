@@ -104,6 +104,41 @@ class StreakReminders {
     }
   }
 
+  static const _social = AndroidNotificationChannel(
+    'social',
+    'Follow requests',
+    description: 'Someone asked to follow you',
+    importance: Importance.high,
+  );
+
+  /// Shows a notification now (follow requests). Skipped when notifications are off; never asks.
+  Future<void> showNow(int id, {required String title, required String body, required String route}) async {
+    if (!_ready) return;
+    try {
+      final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (!(await android?.areNotificationsEnabled() ?? false)) return;
+      await android?.createNotificationChannel(_social);
+      await _plugin.show(
+        id: id,
+        title: title,
+        body: body,
+        payload: route,
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails(
+            _social.id,
+            _social.name,
+            channelDescription: _social.description,
+            importance: Importance.high,
+            priority: Priority.high,
+            color: Brand.flameOrange,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('notification $id not shown: $e');
+    }
+  }
+
   Future<void> cancelAlert(int id) async {
     if (!_ready) return;
     try {

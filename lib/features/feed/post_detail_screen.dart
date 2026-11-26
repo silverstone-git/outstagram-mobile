@@ -10,9 +10,12 @@ final postProvider = FutureProvider.autoDispose.family<Post, String>((ref, id) =
 
 /// `/p/:id`: one post, e.g. from a shared link or a launcher deep link (`outstagram://app/p/<id>`).
 class PostDetailScreen extends ConsumerWidget {
-  const PostDetailScreen({super.key, required this.postId});
+  const PostDetailScreen({super.key, required this.postId, this.focusLatex});
 
   final String postId;
+
+  /// Opened from "Saved equations": pulse this caption equation.
+  final String? focusLatex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -42,7 +45,7 @@ class PostDetailScreen extends ConsumerWidget {
             ]);
           },
           data: (p) => ListView(children: [
-            PostCard(post: p, detail: true, onDeleted: () => Navigator.of(context).maybePop()),
+            PostCard(post: p, detail: true, highlightLatex: focusLatex, onDeleted: () => Navigator.of(context).maybePop()),
           ]),
         ),
       ),

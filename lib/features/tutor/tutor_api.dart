@@ -63,13 +63,19 @@ class TutorApi {
     String questionId,
     String message, {
     List<String>? skills,
+    Map<String, dynamic>? choice, // model / effort / byok (Pro, Contributor): see ai_options.dart
     CancelToken? cancel,
   }) async* {
     final Response<ResponseBody> res;
     try {
       res = await _api.dio.post<ResponseBody>(
         '/exam-attempts/$attemptId/chat/stream',
-        data: {'question_id': questionId, 'message': message, if (skills != null && skills.isNotEmpty) 'skills': skills},
+        data: {
+          'question_id': questionId,
+          'message': message,
+          if (skills != null && skills.isNotEmpty) 'skills': skills,
+          ...?choice,
+        },
         cancelToken: cancel,
         options: Options(
           responseType: ResponseType.stream,
@@ -127,6 +133,9 @@ class TutorApi {
     String? context,
     String? attemptId,
     String? questionId,
+    int? messageId,
+    String? postId,
+    String? source,
   }) async => FavoriteEquation.fromJson(
     await _api.post<Map<String, dynamic>>(
       '/favorites/equations',
@@ -137,6 +146,9 @@ class TutorApi {
         'context': context,
         'attempt_id': attemptId,
         'question_id': questionId,
+        'message_id': messageId,
+        'post_id': postId,
+        'source': source,
       },
     ),
   );

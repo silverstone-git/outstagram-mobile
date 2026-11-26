@@ -1,6 +1,9 @@
 import '../compose/compose_screen.dart' show postsVersionProvider;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
+import '../../core/ui/equation_menu.dart';
+import '../../core/ui/math_text.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,9 +20,12 @@ import 'models.dart';
 import 'social_api.dart';
 
 class PostCard extends ConsumerStatefulWidget {
-  const PostCard({super.key, required this.post, this.onDeleted, this.detail = false});
+  const PostCard({super.key, required this.post, this.onDeleted, this.detail = false, this.highlightLatex});
 
   final Post post;
+
+  /// Opened from "Saved equations": the caption equation to pulse.
+  final String? highlightLatex;
   final VoidCallback? onDeleted;
 
   /// Shown on its own page (`/p/:id`): no "Open post" item.
@@ -187,7 +193,7 @@ class _PostCardState extends ConsumerState<PostCard> with SingleTickerProviderSt
                   colors: [cs.primary.withValues(alpha: 0.16), cs.tertiary.withValues(alpha: 0.10)],
                 ),
               ),
-              child: _Caption(text: p.caption, big: true),
+              child: _Caption(text: p.caption, big: true, postId: p.id, highlight: widget.highlightLatex),
             ),
             _HeartBurst(controller: _heart),
           ]),
@@ -235,7 +241,7 @@ class _PostCardState extends ConsumerState<PostCard> with SingleTickerProviderSt
       if (p.media.isNotEmpty && p.caption.isNotEmpty)
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
-          child: _Caption(text: p.caption, author: p.author),
+          child: _Caption(text: p.caption, author: p.author, postId: p.id, highlight: widget.highlightLatex),
         ),
       if (p.commentCount > 0)
         Padding(
@@ -262,8 +268,13 @@ class _MediaView extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     if (media.isVideo) return PostVideo(url: media.url);
+    // Presigned links change each time the server re-signs them: cache by object path, and decode at
+    // screen width instead of full resolution (less memory, smoother scrolling).
+    final px = (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round();
     return CachedNetworkImage(
       imageUrl: media.url,
+      cacheKey: Avatar.cacheKey(media.url),
+      memCacheWidth: px,
       fit: BoxFit.cover,
       fadeInDuration: const Duration(milliseconds: 150),
       placeholder: (_, _) => Container(color: cs.surfaceContainerHigh),
@@ -303,22 +314,46 @@ class _HeartBurst extends StatelessWidget {
 }
 
 /// Caption with hashtags in the brand colour.
-class _Caption extends StatelessWidget {
-  const _Caption({required this.text, this.author, this.big = false});
+/// Captions with maths: `$$…$$`, `\[…\]`, `\(…\)`, or `$…$` that opens before a non-space and closes
+/// before a non-digit (so "$5 and $10" stays text, Pandoc's rule; same as the web's RichCaption).
+final _captionMath = RegExp(r'\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$(?=\S)(?:\\\$|[^$\n])+?(?<=\S)\$(?!\d)');
+
+class _Caption extends ConsumerWidget {
+  const _Caption({required this.text, this.author, this.big = false, this.postId, this.highlight});
 
   final String text;
   final String? author;
   final bool big;
+  final String? postId;
+  final String? highlight;
 
   static final _tag = RegExp(r'#\w+');
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final base = TextStyle(fontSize: big ? 17 : 14.5, height: 1.35, color: cs.onSurface, fontWeight: big ? FontWeight.w500 : null);
-    final spans = <TextSpan>[
+    final spans = <InlineSpan>[
       if (author != null) TextSpan(text: '$author  ', style: const TextStyle(fontWeight: FontWeight.w700)),
     ];
+    if (_captionMath.hasMatch(text)) {
+      // LaTeX: long-press an equation to save or copy it.
+      spans.add(WidgetSpan(
+        child: MathText(
+          text,
+          style: base,
+          highlight: highlight,
+          onPickEquation: (latex, display) => showEquationMenu(
+            context,
+            ref,
+            latex,
+            display,
+            EquationSource(source: 'post', postId: postId, context: text.length > 300 ? text.substring(0, 300) : text),
+          ),
+        ),
+      ));
+      return Text.rich(TextSpan(style: base, children: spans));
+    }
     var i = 0;
     for (final m in _tag.allMatches(text)) {
       spans.add(TextSpan(text: text.substring(i, m.start)));

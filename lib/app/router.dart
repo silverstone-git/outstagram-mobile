@@ -162,7 +162,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/p/:id',
         builder: (_, s) => Rooted(
           location: s.uri.toString(),
-          child: PostDetailScreen(postId: s.pathParameters['id']!),
+          child: PostDetailScreen(postId: s.pathParameters['id']!, focusLatex: s.uri.queryParameters['eq']),
         ),
       ),
       // App Links (prod https://outstagram.aryan.cfd/p/?id=… and /u/?name=…, staging under aryan.cfd/outstagram)
@@ -191,7 +191,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/exam/attempt/:id',
         builder: (_, s) => Rooted(
           location: s.uri.toString(),
-          child: AttemptScreen(attemptId: s.pathParameters['id']!),
+          child: AttemptScreen(
+            attemptId: s.pathParameters['id']!,
+            focusQuestionId: s.uri.queryParameters['q'],
+            focusLatex: s.uri.queryParameters['eq'],
+          ),
         ),
       ),
       GoRoute(
@@ -206,6 +210,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             attemptId: s.pathParameters['attemptId']!,
             questionId: s.pathParameters['questionId']!,
             question: s.extra is TutorQuestion ? s.extra! as TutorQuestion : null,
+            focusLatex: s.uri.queryParameters['eq'],
+            focusMessageId: int.tryParse(s.uri.queryParameters['mid'] ?? ''),
           ),
         ),
       ),
