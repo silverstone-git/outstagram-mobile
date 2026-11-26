@@ -9,8 +9,9 @@ import '../../core/ui/code_field.dart';
 import '../../core/ui/feedback.dart';
 import '../auth/email_code_screen.dart';
 import 'account_api.dart';
+import 'your_data.dart';
 
-/// `/account`: email (confirmed or not), change email, change password.
+/// `/account`: email (confirmed or not), change email, change password, download / delete my data.
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
 
@@ -75,6 +76,8 @@ class AccountScreen extends ConsumerWidget {
                         style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                       ),
                     ),
+                    const SizedBox(height: 20),
+                    YourDataCard(username: m.username),
                   ],
                 ),
               ),

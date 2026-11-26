@@ -39,7 +39,7 @@ class ProfileScreen extends ConsumerWidget {
             itemBuilder: (_) => const [
               PopupMenuItem(
                 value: 'account',
-                child: ListTile(leading: Icon(Icons.manage_accounts_outlined), title: Text('Account & email')),
+                child: ListTile(leading: Icon(Icons.manage_accounts_outlined), title: Text('Account, email & data')),
               ),
               PopupMenuItem(
                 value: 'streak',

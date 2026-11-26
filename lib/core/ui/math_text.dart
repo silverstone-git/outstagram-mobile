@@ -1,19 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 
+import 'equation_menu.dart';
+
 /// Text with LaTeX: `$…$` / `\(…\)` inline, `$$…$$` / `\[…\]` display. Mirrors outstagram-web's
 /// `Latex.tsx` clean-up: question-bank text often has doubled backslashes (`\\theta`), and some
 /// LLM-written items have bare `\begin{…}` or `\alpha` without delimiters.
+///
+/// With [onPickEquation], long-pressing an equation calls it (the equation menu: save, copy). An equation
+/// equal to [highlight] scrolls into view and pulses (opened from "Saved equations").
 class MathText extends StatelessWidget {
-  const MathText(this.source, {super.key, this.style, this.maxLines});
+  const MathText(this.source, {super.key, this.style, this.maxLines, this.onPickEquation, this.highlight});
 
   final String source;
   final TextStyle? style;
   final int? maxLines;
+  final EquationPick? onPickEquation;
+  final String? highlight;
 
   @override
   Widget build(BuildContext context) {
     final base = DefaultTextStyle.of(context).style.merge(style);
+    final want = highlight == null ? null : eqKey(highlight!);
+    Widget wrap(Widget w, MathSegment seg, {bool pulse = true}) {
+      if (pulse && want != null && eqKey(seg.text) == want) w = EquationPulse(child: w);
+      final pick = onPickEquation;
+      if (pick == null) return w;
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onLongPress: () => pick(seg.text, seg.display),
+        child: w,
+      );
+    }
+
     final blocks = <Widget>[];
     final spans = <InlineSpan>[];
 
@@ -31,10 +50,13 @@ class MathText extends StatelessWidget {
         flush();
         blocks.add(Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Math.tex(seg.text, mathStyle: MathStyle.display, textStyle: base,
-                onErrorFallback: (e) => Text(seg.text, style: base)),
+          child: wrap(
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Math.tex(seg.text, mathStyle: MathStyle.display, textStyle: base,
+                  onErrorFallback: (e) => Text(seg.text, style: base)),
+            ),
+            seg,
           ),
         ));
       } else {
@@ -44,8 +66,9 @@ class MathText extends StatelessWidget {
         // texBreak throws on some trees (e.g. `\,` spacing: UnsupportedError in TemporaryNode.rightType);
         // then the formula just doesn't wrap.
         List<Widget> parts;
+        final highlighted = want != null && eqKey(seg.text) == want;
         try {
-          parts = math.texBreak().parts;
+          parts = highlighted ? [math] : math.texBreak().parts; // one piece, so it pulses as one
         } catch (_) {
           parts = [math];
         }
@@ -53,7 +76,7 @@ class MathText extends StatelessWidget {
           // texBreak drops the space after the operator it breaks at; a normal space (~TeX's thick
           // space) puts it back and stays a line-break opportunity.
           if (i > 0) spans.add(const TextSpan(text: ' '));
-          spans.add(WidgetSpan(alignment: PlaceholderAlignment.baseline, baseline: TextBaseline.alphabetic, child: parts[i]));
+          spans.add(WidgetSpan(alignment: PlaceholderAlignment.baseline, baseline: TextBaseline.alphabetic, child: wrap(parts[i], seg)));
         }
       }
     }

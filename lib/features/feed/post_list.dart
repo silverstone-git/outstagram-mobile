@@ -14,7 +14,15 @@ class PostList extends StatefulWidget {
     required this.pageSize,
     this.empty,
     this.header,
+    this.onRefresh,
+    this.cached,
   });
+
+  /// The last saved first page, shown at once on open while page 1 loads (stale-while-revalidate).
+  final Future<List<Post>?> Function()? cached;
+
+  /// Also reloaded on pull-to-refresh (e.g. the profile header's counts).
+  final Future<void> Function()? onRefresh;
 
   final PageLoader loader;
   final int pageSize;
@@ -30,6 +38,7 @@ class PostListState extends State<PostList> with AutomaticKeepAliveClientMixin {
   var _page = 1;
   var _loading = false;
   var _done = false;
+  var _stale = false; // showing the cached first page; page 1 is on its way
   ApiException? _error;
 
   @override
@@ -38,14 +47,31 @@ class PostListState extends State<PostList> with AutomaticKeepAliveClientMixin {
   @override
   void initState() {
     super.initState();
+    _showCached();
     _more();
+  }
+
+  Future<void> _showCached() async {
+    final c = await widget.cached?.call();
+    if (!mounted || c == null || c.isEmpty || _posts.isNotEmpty || _page > 1) return;
+    setState(() {
+      _posts.addAll(c);
+      _stale = true;
+    });
   }
 
   Future<void> refresh() async {
     _page = 1;
     _done = false;
     _error = null;
+    final extra = widget.onRefresh?.call();
     final first = await _fetch();
+    if (first != null) _stale = false;
+    try {
+      await extra;
+    } catch (_) {
+      // the header shows its own error
+    }
     if (!mounted || first == null) return;
     setState(() {
       _posts
@@ -72,9 +98,15 @@ class PostListState extends State<PostList> with AutomaticKeepAliveClientMixin {
       _loading = true;
       _error = null;
     });
+    final first = _page == 1;
     final next = await _fetch();
     if (!mounted) return;
     setState(() {
+      if (first && _stale) {
+        if (next != null) _posts.clear(); // fresh page 1 replaces the cached one
+        // offline: keep showing what we had; the error box at the end offers Retry
+        _stale = next == null && _posts.isNotEmpty;
+      }
       if (next != null) _posts.addAll(next);
       _loading = false;
     });
@@ -88,7 +120,8 @@ class PostListState extends State<PostList> with AutomaticKeepAliveClientMixin {
     final extra = header == null ? 0 : 1;
     return RefreshIndicator(
       onRefresh: refresh,
-      child: ListView.builder(
+      child: Stack(children: [
+      ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: extra + (_posts.isEmpty ? 1 : _posts.length + 1),
         itemBuilder: (context, i) {
@@ -120,6 +153,9 @@ class PostListState extends State<PostList> with AutomaticKeepAliveClientMixin {
           );
         },
       ),
+        if (_stale && _loading)
+          const Positioned(top: 0, left: 0, right: 0, child: LinearProgressIndicator(minHeight: 2)),
+      ]),
     );
   }
 }

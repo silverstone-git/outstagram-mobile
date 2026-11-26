@@ -48,7 +48,14 @@ class ProfileView extends ConsumerWidget {
       key: ValueKey('posts-$username-$v'),
       pageSize: 10,
       loader: (page) => api.userPosts(username, page),
+      cached: () => api.cachedUserPosts(username),
       header: _Header(username: username, isMe: isMe),
+      // follower/following counts change without a new post: reload the header too
+      onRefresh: () async {
+        ref.invalidate(profileProvider(username));
+        if (isMe) ref.invalidate(myStatsProvider);
+        await ref.read(profileProvider(username).future);
+      },
       empty: Padding(
         padding: const EdgeInsets.all(40),
         child: Center(child: Text(isMe ? 'Share your first post from the + tab' : 'No posts yet')),
