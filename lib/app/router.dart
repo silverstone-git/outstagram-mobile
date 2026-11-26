@@ -167,6 +167,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       // App Links (prod https://outstagram.aryan.cfd/p/?id=… and /u/?name=…, staging under aryan.cfd/outstagram)
       // arrive with that path; the top-level redirect maps them (isShareLink), these are a fallback.
+      GoRoute(path: '/p', redirect: (_, s) => appLinkTarget(s.uri)),
+      GoRoute(path: '/u', redirect: (_, s) => appLinkTarget(s.uri)),
       GoRoute(path: '/outstagram/p', redirect: (_, s) => appLinkTarget(s.uri)),
       GoRoute(path: '/outstagram/u', redirect: (_, s) => appLinkTarget(s.uri)),
       GoRoute(
