@@ -12,7 +12,7 @@ void main() {
       expect(emailLinkTarget(Uri.parse('https://outstagram.aryan.cfd/signin/?h=abc123')), '/email-link?h=abc123');
       expect(emailLinkTarget(Uri.parse('/signin?h=abc123')), '/email-link?h=abc123');
       expect(emailLinkTarget(Uri.parse('https://aryan.cfd/outstagram/signin/?h=ff00')), '/email-link?h=ff00');
-      expect(emailLinkTarget(Uri.parse('/signin/')), '/email-link?h=');
+      expect(emailLinkTarget(Uri.parse('/signin/')), '/email-link?h', reason: 'no hash: the screen says the link is incomplete');
       expect(emailLinkTarget(Uri.parse('/sign-in')), isNull);
       expect(emailLinkTarget(Uri.parse('/outstagram/p/?id=x')), isNull);
     });
