@@ -30,6 +30,9 @@ class _OfflineApi extends ExamApi {
 void main() {
   group('App Links', () {
     test('share links map onto app routes', () {
+      expect(appLinkTarget(Uri.parse('https://outstagram.aryan.cfd/p/?id=abc-123')), '/p/abc-123');
+      expect(appLinkTarget(Uri.parse('https://outstagram.aryan.cfd/u/?name=asha_v')), '/u/asha_v');
+      expect(appLinkTarget(Uri.parse('/p/?id=x')), '/p/x');
       expect(appLinkTarget(Uri.parse('https://aryan.cfd/outstagram/p/?id=abc-123')), '/p/abc-123');
       expect(appLinkTarget(Uri.parse('/outstagram/p?id=x')), '/p/x');
       expect(appLinkTarget(Uri.parse('https://aryan.cfd/outstagram/u/?name=asha_v')), '/u/asha_v');
@@ -40,6 +43,8 @@ void main() {
     test('the app\'s own links are navigation, not shared content', () {
       expect(isOwnDeepLink('outstagram://app/tutor'), isTrue);
       expect(isOwnDeepLink('https://aryan.cfd/outstagram/p/?id=abc'), isTrue);
+      expect(isOwnDeepLink('https://outstagram.aryan.cfd/p/?id=abc'), isTrue);
+      expect(isOwnDeepLink('https://outstagram.aryan.cfd/u/?name=asha'), isTrue);
       expect(isOwnDeepLink(' https://aryan.cfd/outstagram/u/?name=asha '), isTrue);
       expect(isOwnDeepLink('Look at this https://aryan.cfd/outstagram/p/?id=abc'), isFalse, reason: 'text around it');
       expect(isOwnDeepLink('https://example.com/p/?id=abc'), isFalse);

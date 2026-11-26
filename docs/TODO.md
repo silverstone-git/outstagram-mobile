@@ -191,7 +191,9 @@ Next, needs the user:
       apps registered (`com.cyto.outstagram`, `.staging`) → `google-services.json` per flavor. Then server: `POST /me/devices`,
       a `devicetoken` table (re-run supabase-lockdown.sql), sends on follow request/approval/like/comment via FCM HTTP v1
       (service account on Cloud Run); app: `firebase_messaging`, notification permission (Android 13+), tap → deep link.
-- [x] **App Links** (2026-11-25): share links are `https://aryan.cfd/outstagram/p/?id=<post>` and `/u/?name=<user>`
+- [x] **App Links** (2026-11-25; prod host fixed 2026-11-26): share links are `<WEB_BASE>/p/?id=<post>` and `/u/?name=<user>`,
+  prod `https://outstagram.aryan.cfd` (Vercel), staging `https://aryan.cfd/outstagram` (preview). Until 2026-11-26 prod
+  used the staging URL too
       (real folders on the static host; the web opens the post, outstagram-web PR #7). The manifest claims
       `/outstagram/p` + `/outstagram/u` with `autoVerify`; `router.dart` `appLinkTarget` maps them to `/p/:id`, `/u/:name`.
 - [x] **`assetlinks.json` uploaded** by the user to `https://aryan.cfd/.well-known/assetlinks.json` (2026-11-25);

@@ -98,11 +98,12 @@ Future<ComposeDraft> draftFromShared(List<SharedMediaFile> files) async {
 }
 
 /// Links the app opens itself: launcher shortcuts (`res/xml/shortcuts.xml`) and App Links to posts and
-/// profiles (`https://aryan.cfd/outstagram/p/?id=…`, `/u/?name=…`), and email sign-in links (`…/signin/?h=…`).
+/// profiles (`https://outstagram.aryan.cfd/p/?id=…`, `/u/?name=…`; staging under `https://aryan.cfd/outstagram/`), and email
+/// sign-in links (`…/signin/?h=…`).
 /// They're navigation, not content.
 bool isOwnDeepLink(String s) {
   final t = s.trim();
   return t.startsWith('outstagram://') ||
       RegExp(r'^https://aryan\.cfd/outstagram/([pu]|signin)/?\?\S*$').hasMatch(t) ||
-      RegExp(r'^https://outstagram\.aryan\.cfd/signin/?\?\S*$').hasMatch(t);
+      RegExp(r'^https://outstagram\.aryan\.cfd/([pu]|signin)/?\?\S*$').hasMatch(t);
 }
