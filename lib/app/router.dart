@@ -10,6 +10,7 @@ import '../features/account/account_screen.dart';
 import '../features/account/verify_email_screen.dart';
 import '../features/activity/activity_screen.dart';
 import '../features/auth/email_code_screen.dart';
+import '../features/auth/email_link_screen.dart';
 import '../features/auth/forgot_password_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/sign_in_screen.dart';
@@ -44,6 +45,14 @@ String appLinkTarget(Uri uri) {
   return '/feed';
 }
 
+/// The magic link in the code email, opened through App Links: `/signin/?h=…` (prod,
+/// outstagram.aryan.cfd) or `/outstagram/signin/?h=…` (staging, aryan.cfd) → `/email-link?h=…`. Null otherwise.
+String? emailLinkTarget(Uri uri) {
+  final path = uri.path.endsWith('/') && uri.path.length > 1 ? uri.path.substring(0, uri.path.length - 1) : uri.path;
+  if (path != '/signin' && path != '/outstagram/signin') return null;
+  return Uri(path: '/email-link', queryParameters: {'h': uri.queryParameters['h']?.trim() ?? ''}).toString();
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ValueNotifier<AsyncValue<Session?>>(const AsyncLoading());
   ref.listen(authControllerProvider, (_, next) => auth.value = next, fireImmediately: true);
@@ -61,7 +70,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/feed',
     refreshListenable: auth,
     redirect: (context, state) {
+      // Email sign-in links work signed in or out and while the session loads; the screen signs in itself
+      // (the one screen that navigates after a sign-in: it may also have to ask for a new password).
+      final link = emailLinkTarget(state.uri);
+      if (link != null) return link;
       final loc = state.matchedLocation;
+      if (loc == '/email-link') return null;
       if (auth.value.isLoading && !auth.value.hasValue) {
         if (loc == '/splash') return null;
         remember(state);
@@ -85,6 +99,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
       GoRoute(path: '/sign-in/email', builder: (_, _) => const EmailCodeScreen()),
+      GoRoute(path: '/email-link', builder: (_, s) => EmailLinkScreen(tokenHash: s.uri.queryParameters['h'] ?? '')),
+      GoRoute(path: '/signin', redirect: (_, s) => emailLinkTarget(s.uri)),
+      GoRoute(path: '/outstagram/signin', redirect: (_, s) => emailLinkTarget(s.uri)),
       GoRoute(
         path: '/forgot-password',
         builder: (_, s) => ForgotPasswordScreen(email: s.uri.queryParameters['email']),

@@ -38,12 +38,16 @@ android {
             resValue("string", "app_name", "Outstagram β")
             resValue("string", "application_id", "com.cyto.outstagram.staging")
             manifestPlaceholders["authScheme"] = "com.cyto.outstagram.staging"
+            manifestPlaceholders["emailLinkHost"] = "aryan.cfd"
+            manifestPlaceholders["emailLinkPath"] = "/outstagram/signin"
         }
         create("prod") {
             dimension = "env"
             resValue("string", "app_name", "Outstagram")
             resValue("string", "application_id", "com.cyto.outstagram")
             manifestPlaceholders["authScheme"] = "com.cyto.outstagram"
+            manifestPlaceholders["emailLinkHost"] = "outstagram.aryan.cfd"
+            manifestPlaceholders["emailLinkPath"] = "/signin"
         }
     }
 

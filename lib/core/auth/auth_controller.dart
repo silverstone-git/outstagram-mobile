@@ -81,6 +81,16 @@ class AuthController extends AsyncNotifier<Session?> {
     await _set(s);
   }
 
+  /// Magic link: signs in when the link does (whoever was signed in before), returns what happened.
+  Future<EmailLinkResult> signInWithEmailLink(String tokenHash) async {
+    final r = await _repo.emailLink(tokenHash);
+    if (r.session != null) await _set(r.session!);
+    return r;
+  }
+
+  Future<void> resetPasswordWithLink(String resetToken, String newPassword) async =>
+      _set(await _repo.resetPasswordWithLink(resetToken, newPassword));
+
   Future<void> sendPasswordResetCode(String email) => _repo.forgotPassword(email.trim().toLowerCase());
 
   /// Works signed in or out; either way this device ends up signed in with the new password.

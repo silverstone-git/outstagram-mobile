@@ -118,6 +118,21 @@ class AuthRepository {
     return (Session.fromAuthResponse(d), d['created'] == true);
   });
 
+  /// Magic link from the code email (`…/signin/?h=<token hash>`, opened here via App Links).
+  Future<EmailLinkResult> emailLink(String tokenHash) => _call(() async {
+    final d = (await _dio.post('/auth/email/link', data: {'token_hash': tokenHash})).data as Map<String, dynamic>;
+    return EmailLinkResult(
+      session: d['access_token'] != null ? Session.fromAuthResponse(d) : null,
+      resetToken: d['next'] == 'password' ? d['reset_token'] as String? : null,
+      changedEmail: d['changed_email'] as String?,
+    );
+  });
+
+  /// After a forgot-password link: sets the new password, signs other devices out, returns this session.
+  Future<Session> resetPasswordWithLink(String resetToken, String newPassword) => _session(
+    _dio.post('/auth/password/reset-link', data: {'reset_token': resetToken, 'new_password': newPassword}),
+  );
+
   Future<void> forgotPassword(String email) => _call(() => _dio.post('/auth/password/forgot', data: {'email': email}));
 
   /// Sets the new password, signs every other device out, and returns a session for this one.
@@ -134,4 +149,14 @@ class AuthRepository {
       // Best effort: the local sign-out happens regardless.
     }
   }
+}
+
+/// What a magic link did: signed in ([session]; after a forgot-password email also a [resetToken] for
+/// the new password), or changed an account's email to [changedEmail] (no session).
+class EmailLinkResult {
+  const EmailLinkResult({this.session, this.resetToken, this.changedEmail});
+
+  final Session? session;
+  final String? resetToken;
+  final String? changedEmail;
 }
