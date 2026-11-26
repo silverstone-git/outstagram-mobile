@@ -32,6 +32,8 @@ See `docs/auth.md`. `POST /login` is **form-encoded** (the `username` field also
 | `GET /auth/email/config` | `{enabled, code_length}` (6 unless `OUTSIE_EMAIL_OTP_LENGTH` says otherwise) |
 | `POST /auth/email/start {email}` | 204; emails a code. 429 when asked too often (5 per address per 15 min) |
 | `POST /auth/email/verify {email, code}` | sign-in response + `created` (true = a new account was made). 401 wrong/expired code; 429 after 5 wrong codes |
+| `POST /auth/email/link {token_hash}` (or `{access_token}`) | the email's magic link. Sign-in response + `created` + `next` (`"password"` after a forgot-password email, with `reset_token`); after a change-email email `{changed_email, username}` and no session. 401 expired/used; 429 too many wrong links from this IP |
+| `POST /auth/password/reset-link {reset_token, new_password}` | after a forgot-password link: like `/auth/password/reset`; the token lasts 15 min and one use |
 | `POST /auth/password/forgot {email}` | 204 always (a code is sent only if an account has the address) |
 | `POST /auth/password/reset {email, code, new_password}` | sets the password (8+ chars), revokes every refresh token, returns a sign-in response |
 | `GET /me` | `{user_id, username, fullname, bio, email, email_verified, email_verified_at, verification_required}` |

@@ -132,8 +132,28 @@ Supabase dashboard, **both** projects:
 - Authentication → Email Templates: **Magic Link** (sent to addresses Supabase already knows) and **Confirm signup**
   (sent to new addresses) must show `{{ .Token }}`, e.g. `<h2>Your Outstagram code: {{ .Token }}</h2><p>It expires in 10 minutes.</p>`.
   Without it the email only has a link and the app can't use it.
+- **Magic links** (2026-11-26): the same templates also link to `{{ .RedirectTo }}?h={{ .TokenHash }}`. outsie sends
+  `redirect_to = OUTSIE_EMAIL_LINK_URL`: prod `https://outstagram.aryan.cfd/signin/`, staging
+  `https://aryan.cfd/outstagram/signin/`. That URL must be in **Authentication → URL Configuration → Redirect URLs**, or
+  Supabase falls back to the Site URL (the web still handles `?h=` there, but the app won't open).
 - Authentication → Rate Limits: every call comes from outsie's IP, so "Token verifications" and "emails sent" are shared by all
   users; raise them as usage grows. outsie adds its own per-address limits (5 codes / 5 wrong codes per 15 min).
+
+### Magic links
+
+The link opens the app through App Links (prod: host `outstagram.aryan.cfd` path `/signin/`; staging: host `aryan.cfd`
+path `/outstagram/signin/`; per-flavor `emailLinkHost`/`emailLinkPath` manifest placeholders). Both hosts serve
+`/.well-known/assetlinks.json` with both packages (outstagram.aryan.cfd from `outstagram-web/public/.well-known/`).
+Without the app, the web's `/signin/` page opens instead and waits for a tap (mail scanners open links on their own).
+
+`router.dart` sends `/signin/?h=…` and `/outstagram/signin/?h=…` to `/email-link?h=…` (`EmailLinkScreen`), signed in or
+out and before the stored session loads. The screen posts the hash to `POST /auth/email/link`; what happens depends on
+the newest email outsie sent to that address:
+- sign-in / confirm email → signed in (as that address, even if someone else was signed in), on to the feed;
+- forgot password → signed in, plus a 15-minute `reset_token` → "Set a new password" → `POST /auth/password/reset-link`;
+- change email → that account's email changes, no session ("Email changed").
+Using the link spends the code in the same email, and the other way round. Wrong links are limited per IP (20 / 15 min)
+plus 200 / 15 min overall, since Supabase's verify limit is shared by all users.
 
 `user.email_verified_at` (added 2026-11-25) is set by Google and email-code sign-ins, the confirm flow, a password reset and
 an email change. Accounts that existed before were back-filled from Supabase `auth.users.email_confirmed_at` (Google users).
@@ -152,5 +172,7 @@ outsie turns the gate off). The profile shows an "Unverified" badge and a banner
 | Signed out every ~30 min | Server without refresh tokens (old deploy) → `refresh_token` null | Deploy `outstagram-server` ≥ `fdecac2` |
 | "Session expired, please sign in again" right after reinstalling | Old refresh token was rotated elsewhere / family revoked | Sign in again (by design) |
 | The email arrives but has no code, only a link | The Supabase template lacks `{{ .Token }}` | §6: edit **Magic Link** and **Confirm signup** |
+| Tapping the email link opens the website, not the app | App Link not verified: link host/path not this flavor's, `assetlinks.json` missing the package/SHA-256, or Supabase used the Site URL (redirect not allowed) | §6 Magic links; `adb shell pm get-app-links com.cyto.outstagram` |
+| The link page says the link expired or was already used | Older email (a newer one replaces it), the code from it was used, or a mail scanner opened it | Ask for a new email or type the code |
 | "We couldn't send the email right now" (502) | Supabase `/otp` failed: SMTP settings, sender domain, or Supabase's hourly email limit | Supabase → Logs → Auth; outsie logs `supabase /otp failed` |
 | "Please wait a minute before asking for another code" | Supabase's per-address 60 s limit | Wait; the app's Resend button already counts down 60 s |

@@ -91,7 +91,8 @@ lib/
       code_field.dart            CodeField (6 boxes over one hidden field, autofill + paste, auto-submit), ResendButton (60 s)
   features/
     auth/                        sign-in, register, splash, BrandMark (SVG mark + "Outsta"/"gram" text) and BrandSymbol,
-                                 email_code_screen.dart (/sign-in/email), forgot_password_screen.dart (/forgot-password, /account/password)
+                                 email_code_screen.dart (/sign-in/email), email_link_screen.dart (/email-link: magic links, App Links),
+                                 forgot_password_screen.dart (/forgot-password, /account/password)
     account/                     account_api.dart (GET /me → meProvider, confirm/change email), verify_email_screen.dart (/verify-email),
                                  account_screen.dart (/account, /account/email, VerifyEmailBanner), verify_gate.dart (403 → sheet)
     streak/                      streak_api.dart (StreakStatus incl. freezes, streakProvider, friendStreaksProvider),
