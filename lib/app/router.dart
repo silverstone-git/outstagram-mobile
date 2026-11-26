@@ -34,15 +34,24 @@ import '../features/shell/app_shell.dart';
 
 const _authRoutes = {'/sign-in', '/register', '/sign-in/email', '/forgot-password'};
 
-/// `/outstagram/p/?id=X` → `/p/X`, `/outstagram/u/?name=Y` → `/u/Y`; anything else → the feed.
+/// Share links: `/p/?id=X` → `/p/X`, `/u/?name=Y` → `/u/Y` (prod, outstagram.aryan.cfd), the same under
+/// `/outstagram/` (staging preview, aryan.cfd); anything else → the feed.
 String appLinkTarget(Uri uri) {
-  final seg = uri.pathSegments.where((s) => s.isNotEmpty).toList();
-  final kind = seg.length >= 2 ? seg[1] : '';
+  var seg = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+  if (seg.isNotEmpty && seg.first == 'outstagram') seg = seg.sublist(1);
+  final kind = seg.length == 1 ? seg.first : '';
   final id = uri.queryParameters['id']?.trim() ?? '';
   final name = uri.queryParameters['name']?.trim() ?? '';
   if (kind == 'p' && id.isNotEmpty) return '/p/${Uri.encodeComponent(id)}';
   if (kind == 'u' && name.isNotEmpty) return '/u/${Uri.encodeComponent(name)}';
   return '/feed';
+}
+
+/// True for an incoming share link (`/p/?id=…`, `/u/?name=…`, with or without `/outstagram`), as opposed to
+/// the app's own `/p/<id>` and `/u/<name>` routes.
+bool isShareLink(Uri uri) {
+  final path = uri.path.endsWith('/') && uri.path.length > 1 ? uri.path.substring(0, uri.path.length - 1) : uri.path;
+  return const {'/p', '/u', '/outstagram/p', '/outstagram/u'}.contains(path);
 }
 
 /// The magic link in the code email, opened through App Links: `/signin/?h=…` (prod,
@@ -74,6 +83,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // (the one screen that navigates after a sign-in: it may also have to ask for a new password).
       final link = emailLinkTarget(state.uri);
       if (link != null) return link;
+      if (isShareLink(state.uri)) return appLinkTarget(state.uri); // then gated like any page
       final loc = state.matchedLocation;
       if (loc == '/email-link') return null;
       if (auth.value.isLoading && !auth.value.hasValue) {
@@ -155,8 +165,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           child: PostDetailScreen(postId: s.pathParameters['id']!),
         ),
       ),
-      // App Links (https://aryan.cfd/outstagram/p/?id=… and /u/?name=…, the web's share links) arrive with
-      // that path; map them onto the app's own routes.
+      // App Links (prod https://outstagram.aryan.cfd/p/?id=… and /u/?name=…, staging under aryan.cfd/outstagram)
+      // arrive with that path; the top-level redirect maps them (isShareLink), these are a fallback.
       GoRoute(path: '/outstagram/p', redirect: (_, s) => appLinkTarget(s.uri)),
       GoRoute(path: '/outstagram/u', redirect: (_, s) => appLinkTarget(s.uri)),
       GoRoute(

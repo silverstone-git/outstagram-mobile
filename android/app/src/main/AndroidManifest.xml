@@ -48,24 +48,28 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="text/plain"/>
             </intent-filter>
-            <!-- App Links: post and profile share links open here (router.dart maps them). Verified through
-                 https://aryan.cfd/.well-known/assetlinks.json (android/assetlinks.json, docs/environments.md). -->
+            <!-- App Links: post and profile share links open here (router.dart maps them). Per flavor
+                 (build.gradle.kts): prod https://outstagram.aryan.cfd/p/ and /u/, staging https://aryan.cfd/outstagram/p/
+                 and /u/. Exact paths: a /p prefix would also take /pricing and /privacy. Verified through each host's
+                 /.well-known/assetlinks.json (docs/environments.md). -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="aryan.cfd" android:pathPrefix="/outstagram/p"/>
-                <data android:pathPrefix="/outstagram/u"/>
+                <data android:scheme="https" android:host="${webLinkHost}" android:path="${webLinkBase}/p/"/>
+                <data android:path="${webLinkBase}/p"/>
+                <data android:path="${webLinkBase}/u/"/>
+                <data android:path="${webLinkBase}/u"/>
             </intent-filter>
             <!-- App Links: the sign-in link in the code email (email_link_screen.dart). Per flavor: prod
-                 https://outstagram.aryan.cfd/signin/, staging https://aryan.cfd/outstagram/signin/ (build.gradle.kts).
+                 https://outstagram.aryan.cfd/signin/, staging https://aryan.cfd/outstagram/signin/ (webLinkHost/webLinkBase in build.gradle.kts).
                  Both hosts serve /.well-known/assetlinks.json naming both packages. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="${emailLinkHost}" android:path="${emailLinkPath}"/>
-                <data android:path="${emailLinkPath}/"/>
+                <data android:scheme="https" android:host="${webLinkHost}" android:path="${webLinkBase}/signin"/>
+                <data android:path="${webLinkBase}/signin/"/>
             </intent-filter>
             <!-- Launcher shortcuts (long-press the icon); they open app routes via Flutter deep linking -->
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts"/>

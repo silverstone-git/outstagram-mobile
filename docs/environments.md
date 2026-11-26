@@ -9,6 +9,7 @@
 | Config | `config/staging.json` | `config/prod.json` |
 | API | `outsie-staging` (Cloud Run) | `outsie` via `https://outsie.aryan.cfd` |
 | Database | Supabase project `outsie-staging` (Tokyo) | Supabase project `outsie` (Tokyo) |
+| Website (`WEB_BASE`, App Links) | `https://aryan.cfd/outstagram` (preview) | `https://outstagram.aryan.cfd` (Vercel) |
 | Browser-auth callback | `com.cyto.outstagram.staging://auth-callback` | `com.cyto.outstagram://auth-callback` |
 
 Both flavors install side by side. `config/*.json` keys (all **public**): `FLAVOR`, `API_BASE`, `WEB_BASE`,

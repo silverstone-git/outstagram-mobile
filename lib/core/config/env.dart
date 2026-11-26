@@ -6,6 +6,7 @@ abstract final class Env {
     'API_BASE',
     defaultValue: 'https://outsie-staging-mgenvq5gwa-an.a.run.app',
   );
+  /// The website share links and policy pages point at: prod https://outstagram.aryan.cfd, staging the preview.
   static const webBase = String.fromEnvironment('WEB_BASE', defaultValue: 'https://aryan.cfd/outstagram');
 
   /// The *Web application* OAuth client that Supabase's Google provider uses. Google puts it in the

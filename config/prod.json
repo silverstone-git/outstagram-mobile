@@ -1,7 +1,7 @@
 {
   "FLAVOR": "prod",
   "API_BASE": "https://outsie.aryan.cfd",
-  "WEB_BASE": "https://aryan.cfd/outstagram",
+  "WEB_BASE": "https://outstagram.aryan.cfd",
   "GOOGLE_SERVER_CLIENT_ID": "595282356777-ppkjuihespj58af8htp4nivg2ife0dbk.apps.googleusercontent.com",
   "AUTH_SCHEME": "com.cyto.outstagram"
 }

@@ -142,7 +142,7 @@ Supabase dashboard, **both** projects:
 ### Magic links
 
 The link opens the app through App Links (prod: host `outstagram.aryan.cfd` path `/signin/`; staging: host `aryan.cfd`
-path `/outstagram/signin/`; per-flavor `emailLinkHost`/`emailLinkPath` manifest placeholders). Both hosts serve
+path `/outstagram/signin/`; per-flavor `webLinkHost`/`webLinkBase` manifest placeholders). Both hosts serve
 `/.well-known/assetlinks.json` with both packages (outstagram.aryan.cfd from `outstagram-web/public/.well-known/`).
 Without the app, the web's `/signin/` page opens instead and waits for a tap (mail scanners open links on their own).
 

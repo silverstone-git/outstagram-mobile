@@ -38,16 +38,18 @@ android {
             resValue("string", "app_name", "Outstagram β")
             resValue("string", "application_id", "com.cyto.outstagram.staging")
             manifestPlaceholders["authScheme"] = "com.cyto.outstagram.staging"
-            manifestPlaceholders["emailLinkHost"] = "aryan.cfd"
-            manifestPlaceholders["emailLinkPath"] = "/outstagram/signin"
+            // Website for App Links (share links, email sign-in); must match WEB_BASE in config/staging.json
+            manifestPlaceholders["webLinkHost"] = "aryan.cfd"
+            manifestPlaceholders["webLinkBase"] = "/outstagram"
         }
         create("prod") {
             dimension = "env"
             resValue("string", "app_name", "Outstagram")
             resValue("string", "application_id", "com.cyto.outstagram")
             manifestPlaceholders["authScheme"] = "com.cyto.outstagram"
-            manifestPlaceholders["emailLinkHost"] = "outstagram.aryan.cfd"
-            manifestPlaceholders["emailLinkPath"] = "/signin"
+            // Website for App Links (share links, email sign-in); must match WEB_BASE in config/prod.json
+            manifestPlaceholders["webLinkHost"] = "outstagram.aryan.cfd"
+            manifestPlaceholders["webLinkBase"] = ""
         }
     }
 
