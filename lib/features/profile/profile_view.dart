@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/net/api_client.dart';
+import '../../core/net/json_cache.dart';
 import '../account/account_api.dart';
 import 'follow_list_screen.dart' show confirmUnfollow;
 import 'profile_photo.dart';
@@ -21,16 +22,18 @@ import '../feed/social_api.dart';
 
 final profileProvider = FutureProvider.autoDispose.family<Profile, String>((ref, username) {
   ref.watch(postsVersionProvider); // a new or deleted post changes the counts
-  return ref.watch(socialApiProvider).profile(username);
+  return ref.watch(socialApiProvider).profile(username, onLate: ref.invalidateSelf);
 });
 
 /// `GET /me/stats` (counted server-side).
-final myStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) {
+final myStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
   // recount after a post is added/deleted and after exam attempts land (they update the streak, also
   // when attempts made offline upload later)
   ref.watch(postsVersionProvider);
   ref.watch(streakProvider);
-  return ref.watch(apiProvider).get<Map<String, dynamic>>('/me/stats');
+  final raw = await JsonCache.fetchOrCached('/me/stats', () => ref.read(apiProvider).get<Map<String, dynamic>>('/me/stats'),
+      onLate: ref.invalidateSelf);
+  return Map<String, dynamic>.from(raw as Map);
 });
 
 /// Profile header + that user's posts. Used for your own tab and for anyone else.

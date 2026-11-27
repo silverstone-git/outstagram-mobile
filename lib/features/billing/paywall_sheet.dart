@@ -190,13 +190,20 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
     final small = TextStyle(fontSize: 12, color: cs.onSurfaceVariant);
     final plans = s.plans;
     String videos(Limits l) => !l.videosAllowed ? '—' : fmtLimit(l.videoBytes, fmtBytes);
-    final rows = <(String, String Function(Limits))>[
-      ('Posts', (l) => fmtLimit(l.posts)),
-      ('Photos/videos per post', (l) => fmtLimit(l.mediaPerPost)),
-      ('Photo size', (l) => fmtBytes(l.mediaBytes)),
-      ('Video size', videos),
-      ('AI tutor messages / hour', (l) => fmtLimit(l.aiPromptsPerHour)),
-      ('Saved tutor chats', (l) => fmtLimit(l.tutorThreads)),
+    // Tutor perks by plan (outstagram-server lib/ai_options.py: models' min_plan, _CONTEXT passages).
+    String perk(PlanInfo p, String free, String pro, String contributor) =>
+        switch (p.id) { 'free' => free, 'contributor' => contributor, _ => pro };
+    final rows = <(String, String Function(PlanInfo))>[
+      ('Posts', (p) => fmtLimit(p.limits.posts)),
+      ('Photos/videos per post', (p) => fmtLimit(p.limits.mediaPerPost)),
+      ('Photo size', (p) => fmtBytes(p.limits.mediaBytes)),
+      ('Video size', (p) => videos(p.limits)),
+      ('AI tutor messages / hour', (p) => fmtLimit(p.limits.aiPromptsPerHour)),
+      ('Saved tutor chats', (p) => fmtLimit(p.limits.tutorThreads)),
+      ('Tutor model', (p) => perk(p, 'Default', 'Choose', '+ Heavy')),
+      ('Thinking level', (p) => perk(p, '—', '✓', '✓')),
+      ('Your own API key', (p) => perk(p, '—', '✓', '✓')),
+      ('Book passages per answer', (p) => perk(p, '8', '12', '16')),
     ];
     final highlight = widget.needs ?? (s.upgrades.isEmpty ? s.plan : s.upgrades.first.id);
     final until = s.validUntil == null ? '' : ' until ${DateFormat.yMMMd().format(s.validUntil!)}';
@@ -246,7 +253,7 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
                     _cell(Text(label, style: const TextStyle(fontSize: 12.5)), left: true),
                     for (final p in plans)
                       _cell(Text(
-                        value(p.limits),
+                        value(p),
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: p.id == highlight ? FontWeight.w800 : FontWeight.w500,

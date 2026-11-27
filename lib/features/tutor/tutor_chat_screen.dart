@@ -198,6 +198,7 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
         }
       }
       HapticFeedback.mediumImpact();
+      ref.invalidate(tutorThreadsProvider); // the library's message counts / order
     } catch (e) {
       if (!mounted || cancel.isCancelled) return;
       final err = ApiException.from(e is TutorStreamError ? ApiException(e.message) : e);
@@ -343,7 +344,11 @@ class _TutorChatScreenState extends ConsumerState<TutorChatScreen> {
           IconButton(
             tooltip: 'Tutor library',
             icon: const Icon(Icons.collections_bookmark_outlined),
-            onPressed: () => context.push('/tutor'),
+            onPressed: () {
+              // otherwise the field regains focus on return and the keyboard pops up
+              FocusManager.instance.primaryFocus?.unfocus();
+              context.push('/tutor');
+            },
           ),
         ],
       ),

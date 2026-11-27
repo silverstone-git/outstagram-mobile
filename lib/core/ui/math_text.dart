@@ -10,13 +10,21 @@ import 'equation_menu.dart';
 /// With [onPickEquation], long-pressing an equation calls it (the equation menu: save, copy). An equation
 /// equal to [highlight] scrolls into view and pulses (opened from "Saved equations").
 class MathText extends StatelessWidget {
-  const MathText(this.source, {super.key, this.style, this.maxLines, this.onPickEquation, this.highlight});
+  const MathText(this.source, {super.key, this.style, this.maxLines, this.onPickEquation, this.highlight, this.displayInline = false,
+      this.strictDollars = false});
 
   final String source;
   final TextStyle? style;
   final int? maxLines;
   final EquationPick? onPickEquation;
   final String? highlight;
+
+  /// Inline maths in display style (full-size fractions): for short answer options, where `rac` in
+  /// text style is too small to read.
+  final bool displayInline;
+
+  /// Post captions: "$5 and $10" next to real maths stays text (see [parseMath] `strict`).
+  final bool strictDollars;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +51,7 @@ class MathText extends StatelessWidget {
       spans.clear();
     }
 
-    for (final seg in parseMath(cleanLatex(source))) {
+    for (final seg in parseMath(strictDollars ? source : cleanLatex(source), strict: strictDollars)) {
       if (!seg.isMath) {
         spans.add(TextSpan(text: seg.text));
       } else if (seg.display && maxLines == null) {
@@ -61,7 +69,7 @@ class MathText extends StatelessWidget {
         ));
       } else {
         // texBreak splits at binary operators/relations so long inline formulas wrap like text.
-        final math = Math.tex(seg.text, mathStyle: MathStyle.text, textStyle: base,
+        final math = Math.tex(seg.text, mathStyle: displayInline ? MathStyle.display : MathStyle.text, textStyle: base,
             onErrorFallback: (e) => Text(seg.text, style: base));
         // texBreak throws on some trees (e.g. `\,` spacing: UnsupportedError in TemporaryNode.rightType);
         // then the formula just doesn't wrap.
@@ -114,11 +122,14 @@ String cleanLatex(String text) {
 }
 
 final _delims = RegExp(r'\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|\$([^$]+?)\$');
+// Post captions: a single `$…$` opens before a non-space and closes before a non-digit (Pandoc's rule).
+final _strictDelims =
+    RegExp(r'\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|\$(?=\S)((?:\\\$|[^$\n])+?)(?<=\S)\$(?!\d)');
 
-List<MathSegment> parseMath(String text) {
+List<MathSegment> parseMath(String text, {bool strict = false}) {
   final out = <MathSegment>[];
   var last = 0;
-  for (final m in _delims.allMatches(text)) {
+  for (final m in (strict ? _strictDelims : _delims).allMatches(text)) {
     if (m.start > last) out.add(MathSegment(text.substring(last, m.start)));
     final display = m[1] != null || m[2] != null;
     out.add(MathSegment((m[1] ?? m[2] ?? m[3] ?? m[4]!).trim(), isMath: true, display: display));

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:outstagram/core/ui/equation_menu.dart' show eqKey, stripCitations;
 import 'package:outstagram/core/ui/math_text.dart';
 
 void main() {
@@ -41,5 +42,18 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: MathText(r'Answer: $2i\\hbar\\,\\hat{p}$'))));
     expect(tester.takeException(), isNull);
     expect(find.byType(MathText), findsOneWidget);
+  });
+
+  // QA 2026-11-27
+  test('saved equations drop the trailing citation marker', () {
+    expect(stripCitations(r'J_x = \frac{\hbar k|A|^2}{m} \quad [2]'), r'J_x = \frac{\hbar k|A|^2}{m}');
+    expect(stripCitations(r'E = mc^2 [1][3]'), 'E = mc^2');
+    expect(stripCitations(r'x[2] + y'), r'x[2] + y'); // an index mid-formula stays
+    expect(eqKey(r'a = b \quad [4]'), eqKey('a = b'));
+  });
+
+  test('captions: \$5 and \$10 stay text next to real maths', () {
+    final segs = parseMath(r'Area $x^2$ costs $5 and $10', strict: true);
+    expect(segs.where((s) => s.isMath).map((s) => s.text).toList(), ['x^2']);
   });
 }

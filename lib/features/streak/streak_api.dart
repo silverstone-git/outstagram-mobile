@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/net/api_client.dart';
+import '../../core/net/json_cache.dart';
 import 'streak_reminders.dart';
 import 'streak_widget.dart';
 import '../exams/exam_api.dart';
@@ -177,7 +178,10 @@ class StreakController extends AsyncNotifier<StreakStatus?> {
       return null;
     }
     await _flushPending();
-    final s = StreakStatus.fromJson(await _api.get<Map<String, dynamic>>('/me/streak'));
+    // Offline, the last known streak (the chip read "0" offline: QA 2026-11-27).
+    final raw = await JsonCache.fetchOrCached('/me/streak', () => _api.get<Map<String, dynamic>>('/me/streak'),
+        onLate: ref.invalidateSelf);
+    final s = StreakStatus.fromJson(Map<String, dynamic>.from(raw as Map));
     StreakReminders.instance.plan(s);
     StreakWidget.update(s);
     return s;
