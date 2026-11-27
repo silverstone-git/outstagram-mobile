@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/net/api_client.dart';
+import '../../core/platform.dart';
 import '../../core/ui/feedback.dart';
 
 /// "Your data" on `/account`: download everything as JSON (`GET /me/export`, shared as a file) or delete
@@ -31,12 +32,26 @@ class _YourDataCardState extends ConsumerState<YourDataCard> {
       final data = await ref.read(apiProvider).get<dynamic>('/me/export');
       final dir = await getTemporaryDirectory();
       final day = DateTime.now().toIso8601String().substring(0, 10);
-      final file = File('${dir.path}/outstagram-${widget.username}-$day.json');
-      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
-      await SharePlus.instance.share(ShareParams(
+      final name = 'outstagram-${widget.username}-$day.json';
+      final file = File('${dir.path}/$name');
+      final json = const JsonEncoder.withIndent('  ').convert(data);
+      await file.writeAsString(json);
+      Future<void> share() => SharePlus.instance.share(ShareParams(
         files: [XFile(file.path, mimeType: 'application/json')],
         subject: 'My Outstagram data',
       ));
+      // Save it (QA 2026-11-27: the share sheet put WhatsApp groups one tap away from a full data dump).
+      final saved = await saveToDownloads(name, utf8.encode(json), 'application/json');
+      if (!mounted) return;
+      if (saved) {
+        HapticFeedback.mediumImpact();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Saved to Downloads/$name'),
+          action: SnackBarAction(label: 'Share', onPressed: share),
+        ));
+      } else {
+        await share(); // Android 9 and older: no MediaStore Downloads without a storage permission
+      }
     } catch (e) {
       if (mounted) showError(context, e);
     } finally {

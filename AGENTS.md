@@ -86,6 +86,7 @@ lib/
       api_client.dart            dioProvider + AuthInterceptor (pre-expiry refresh, 401 → refresh → retry once), Api wrapper
       api_error.dart             ApiException (FastAPI detail parsing, isPaywall, isNetwork)
       json_cache.dart            JsonCache: first page of feed/explore/profile posts on disk (stale-while-revalidate), cleared on account change
+    platform.dart                MainActivity channel `outstagram/platform`: SDK level (systemConfirmsCopy), saveToDownloads (MediaStore)
     ui/
       math_text.dart             MathText: inline/display LaTeX (flutter_math_fork), web-compatible clean-up; onPickEquation, highlight
       equation_menu.dart         long-press equation menu (blurred backdrop, lifted equation: save / copy LaTeX / copy Markdown),

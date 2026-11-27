@@ -95,8 +95,12 @@ class SocialApi {
           UserSummary.fromJson(u as Map<String, dynamic>),
       ];
 
-  Future<Profile> profile(String username) async =>
-      Profile.fromJson(await _api.get<Map<String, dynamic>>('/users/${Uri.encodeComponent(username)}'));
+  /// Offline or slow, the last known header comes from [JsonCache] ([onLate] fires when the real one lands).
+  Future<Profile> profile(String username, {void Function()? onLate}) async {
+    final path = '/users/${Uri.encodeComponent(username)}';
+    final raw = await JsonCache.fetchOrCached(path, () => _api.get<Map<String, dynamic>>(path), onLate: onLate);
+    return Profile.fromJson(Map<String, dynamic>.from(raw as Map));
+  }
 
   Future<void> follow(String username) => _api.post<dynamic>('/users/${Uri.encodeComponent(username)}/follow');
 

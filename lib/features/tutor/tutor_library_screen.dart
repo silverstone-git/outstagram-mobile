@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/net/api_error.dart';
+import '../../core/platform.dart';
 import '../../core/ui/feedback.dart';
 import '../../core/ui/math_text.dart';
 import '../exams/exams_home_screen.dart' show compactButton;
@@ -209,14 +210,34 @@ String? equationLocation(FavoriteEquation f) {
 class _Equations extends ConsumerWidget {
   const _Equations();
 
+  /// Deletes right away (one tap, like the rest of the list) with an Undo that saves it again.
   Future<void> _remove(BuildContext context, WidgetRef ref, FavoriteEquation f) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final api = ref.read(tutorApiProvider);
     try {
-      await ref.read(tutorApiProvider).deleteFavorite(f.id);
+      await api.deleteFavorite(f.id);
       HapticFeedback.lightImpact();
     } catch (e) {
       if (context.mounted) showError(context, e);
+      return;
+    } finally {
+      ref.invalidate(favoriteEquationsProvider);
     }
-    ref.invalidate(favoriteEquationsProvider);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: const Text('Equation removed'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            try {
+              await api.addFavorite(latex: f.latex, display: f.display, skill: f.skill, context: f.context,
+                  attemptId: f.attemptId, questionId: f.questionId, messageId: f.messageId, postId: f.postId, source: f.source);
+            } catch (_) {}
+            ref.invalidate(favoriteEquationsProvider);
+          },
+        ),
+      ));
   }
 
   @override
@@ -297,9 +318,11 @@ class _Equations extends ConsumerWidget {
                             color: cs.onSurfaceVariant,
                             onPressed: () {
                               Clipboard.setData(ClipboardData(text: f.latex));
-                              ScaffoldMessenger.of(context)
-                                ..hideCurrentSnackBar()
-                                ..showSnackBar(const SnackBar(content: Text('LaTeX copied')));
+                              if (!systemConfirmsCopy) {
+                                ScaffoldMessenger.of(context)
+                                  ..hideCurrentSnackBar()
+                                  ..showSnackBar(const SnackBar(content: Text('LaTeX copied')));
+                              }
                             },
                           ),
                           IconButton(

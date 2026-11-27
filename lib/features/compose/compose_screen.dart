@@ -15,6 +15,7 @@ import '../billing/billing_api.dart';
 import '../billing/paywall_sheet.dart';
 import 'compose_draft.dart';
 import '../feed/models.dart';
+import '../feed/post_card.dart' show PostCaption, captionHasMath;
 import '../feed/social_api.dart';
 
 /// Bumped after a post is created so feeds and profiles reload.
@@ -212,7 +213,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   }
 
   void _addTag(String tag) {
-    final t = '#$tag';
+    final t = '#${tag.replaceFirst(RegExp(r'^#+'), '')}'; // /trending returns tags with their '#'
     if (_caption.text.contains(t)) return;
     _caption.text = _caption.text.isEmpty ? t : '${_caption.text.trimRight()} $t';
     _caption.selection = TextSelection.collapsed(offset: _caption.text.length);
@@ -372,6 +373,20 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
             onChanged: (_) => setState(() {}),
             decoration: const InputDecoration(hintText: 'What did you learn, build or ace today?'),
           ),
+          if (captionHasMath(_caption.text)) ...[
+            Text('Preview', style: TextStyle(fontWeight: FontWeight.w700, color: cs.onSurfaceVariant)),
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: PostCaption(text: _caption.text.trim()),
+            ),
+          ],
           if (_trending.isNotEmpty) ...[
             Text(
               'Trending',
@@ -381,7 +396,10 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: [for (final t in _trending) ActionChip(label: Text('#$t'), onPressed: () => _addTag(t))],
+              children: [
+                for (final t in _trending)
+                  ActionChip(label: Text('#${t.replaceFirst(RegExp(r'^#+'), '')}'), onPressed: () => _addTag(t)),
+              ],
             ),
             const SizedBox(height: 16),
           ],

@@ -488,7 +488,7 @@ class _OptionTile extends StatelessWidget {
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(top: 4),
-                        child: MathText(option.value, style: const TextStyle(fontSize: 15, height: 1.35)),
+                        child: MathText(option.value, style: const TextStyle(fontSize: 15, height: 1.35), displayInline: true),
                       ),
                     ),
                   ],

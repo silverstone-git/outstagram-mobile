@@ -193,7 +193,7 @@ class _PostCardState extends ConsumerState<PostCard> with SingleTickerProviderSt
                   colors: [cs.primary.withValues(alpha: 0.16), cs.tertiary.withValues(alpha: 0.10)],
                 ),
               ),
-              child: _Caption(text: p.caption, big: true, postId: p.id, highlight: widget.highlightLatex),
+              child: PostCaption(text: p.caption, big: true, postId: p.id, highlight: widget.highlightLatex),
             ),
             _HeartBurst(controller: _heart),
           ]),
@@ -241,7 +241,7 @@ class _PostCardState extends ConsumerState<PostCard> with SingleTickerProviderSt
       if (p.media.isNotEmpty && p.caption.isNotEmpty)
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
-          child: _Caption(text: p.caption, author: p.author, postId: p.id, highlight: widget.highlightLatex),
+          child: PostCaption(text: p.caption, author: p.author, postId: p.id, highlight: widget.highlightLatex),
         ),
       if (p.commentCount > 0)
         Padding(
@@ -316,10 +316,13 @@ class _HeartBurst extends StatelessWidget {
 /// Caption with hashtags in the brand colour.
 /// Captions with maths: `$$…$$`, `\[…\]`, `\(…\)`, or `$…$` that opens before a non-space and closes
 /// before a non-digit (so "$5 and $10" stays text, Pandoc's rule; same as the web's RichCaption).
+/// Whether a caption renders LaTeX (the composer shows a preview then).
+bool captionHasMath(String text) => _captionMath.hasMatch(text);
+
 final _captionMath = RegExp(r'\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$(?=\S)(?:\\\$|[^$\n])+?(?<=\S)\$(?!\d)');
 
-class _Caption extends ConsumerWidget {
-  const _Caption({required this.text, this.author, this.big = false, this.postId, this.highlight});
+class PostCaption extends ConsumerWidget {
+  const PostCaption({super.key, required this.text, this.author, this.big = false, this.postId, this.highlight});
 
   final String text;
   final String? author;
@@ -342,6 +345,7 @@ class _Caption extends ConsumerWidget {
         child: MathText(
           text,
           style: base,
+          strictDollars: true,
           highlight: highlight,
           onPickEquation: (latex, display) => showEquationMenu(
             context,

@@ -593,6 +593,7 @@ class _ReviewCard extends StatelessWidget {
                                   child: MathText(
                                     o.value,
                                     style: const TextStyle(fontSize: 14),
+                                    displayInline: true,
                                     onPickEquation: onPick == null ? null : (l, d) => onPick!('option', l, d),
                                     highlight: highlight,
                                   ),

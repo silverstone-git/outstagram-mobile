@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/tutor/models.dart';
 import '../../features/tutor/tutor_api.dart';
 import '../net/api_error.dart';
+import '../platform.dart';
 
 /// Where an equation was long-pressed, so "Saved equations" can jump back there (outsie
 /// `FavoriteEquationCreate`: source tutor | question | option | explanation | post).
@@ -43,7 +44,7 @@ Future<void> showEquationMenu(BuildContext context, WidgetRef ref, String latex,
     barrierLabel: 'Close',
     barrierColor: Colors.transparent,
     transitionDuration: const Duration(milliseconds: 220),
-    pageBuilder: (ctx, _, _) => _EquationMenu(latex: latex, display: display, src: src),
+    pageBuilder: (ctx, _, _) => _EquationMenu(latex: stripCitations(latex), display: display, src: src),
     transitionBuilder: (ctx, anim, _, child) {
       final t = CurvedAnimation(parent: anim, curve: Curves.easeOutBack, reverseCurve: Curves.easeIn);
       return Stack(children: [
@@ -68,6 +69,11 @@ Future<void> showEquationMenu(BuildContext context, WidgetRef ref, String latex,
   );
 }
 
+/// Strips trailing citation markers the tutor writes inside display maths (`… = x \quad [2]`), so
+/// saved equations and copies hold just the maths.
+String stripCitations(String latex) =>
+    latex.replaceFirst(RegExp(r'(\s|~|\\[,;:!]|\\q?quad|\\text\{\s*\})*(\[\d+(\s*,\s*\d+)*\]\s*)+$'), '').trimRight();
+
 class _EquationMenu extends ConsumerStatefulWidget {
   const _EquationMenu({required this.latex, required this.display, required this.src});
 
@@ -83,7 +89,7 @@ class _EquationMenuState extends ConsumerState<_EquationMenu> {
   var _busy = false;
 
   FavoriteEquation? _saved(List<FavoriteEquation>? list) =>
-      list?.where((f) => f.latex.trim() == widget.latex.trim()).firstOrNull;
+      list?.where((f) => eqKey(f.latex) == eqKey(widget.latex)).firstOrNull;
 
   Future<void> _toggle(FavoriteEquation? saved) async {
     setState(() => _busy = true);
@@ -118,7 +124,8 @@ class _EquationMenuState extends ConsumerState<_EquationMenu> {
 
   void _copy(String text, String what) {
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text('$what copied')));
+    // Android 13+ shows its own "Copied" confirmation; a snackbar on top of it doubled it up.
+    if (!systemConfirmsCopy) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text('$what copied')));
     Navigator.of(context).pop();
   }
 
@@ -151,8 +158,10 @@ class _EquationMenuState extends ConsumerState<_EquationMenu> {
                         const BoxShadow(color: Colors.black38, blurRadius: 24, offset: Offset(0, 10)),
                       ],
                     ),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
+                    // long equations shrink to fit (a sideways scroll here wasn't discoverable: it looked cut off)
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
                       child: Math.tex(
                         widget.latex,
                         mathStyle: MathStyle.display,
@@ -206,7 +215,7 @@ class _EquationMenuState extends ConsumerState<_EquationMenu> {
 }
 
 /// Normalised LaTeX for matching a saved equation against a rendered one.
-String eqKey(String latex) => latex.replaceAll(RegExp(r'\s+'), '');
+String eqKey(String latex) => stripCitations(latex).replaceAll(RegExp(r'\s+'), '');
 
 /// Scrolls itself into view once and pulses (opened from "Saved equations").
 class EquationPulse extends StatefulWidget {
